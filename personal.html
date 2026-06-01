@@ -256,7 +256,7 @@ function renderQueue() {
   qRowLabels.innerHTML = '';
   for (let row = 0; row < rows; row++) {
     const rl = document.createElement('div');
-    rl.className = 'row-label'; rl.textContent = row === 0 ? 0 : row * COLS;
+    rl.className = 'row-label'; rl.textContent = row === 0 ? '' : row * COLS;
     qRowLabels.appendChild(rl);
   }
 
