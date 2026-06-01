@@ -188,7 +188,10 @@ function saveToFirebase() {
 let COLS = parseInt(localStorage.getItem('taxi-cols') || '10');
 
 function calcTileSize() {
-  const pad = 10*2, labelW = 26+4, gaps = (COLS-1)*4;
+  const pad = 10*2;
+  const hasLabels = document.getElementById('row-labels')?.style.display !== 'none' && (queue||[]).length >= (COLS-1);
+  const labelW = hasLabels ? 26+4 : 0;
+  const gaps = (COLS-1)*4;
   const size = Math.floor((window.innerWidth - pad - labelW - gaps) / COLS);
   document.documentElement.style.setProperty('--tile', size + 'px');
 }
@@ -281,10 +284,11 @@ function renderQueue() {
 
   /* Row labels */
   qRowLabels.innerHTML = '';
+  qRowLabels.style.display = rows <= 1 ? 'none' : 'flex';
   for (let row = 0; row < rows; row++) {
     const rl = document.createElement('div');
     rl.className = 'row-label';
-    rl.textContent = row === 0 ? 0 : row * COLS;
+    rl.textContent = row === 0 ? '' : row * COLS;
     qRowLabels.appendChild(rl);
   }
 
