@@ -279,8 +279,14 @@ function renderQueue() {
         const qIdx = row === 0 ? (col-1) : (9 + (row-1)*10 + col);
         if (qIdx < queue.length) {
           const val = queue[qIdx];
-          tile.textContent = val;
-          tile.classList.add(row === 0 ? (col <= 4 ? 'q-stand' : 'q-hold') : 'q-overflow');
+          const isDummy = (val === 'dummy');
+          if (isDummy) {
+            tile.textContent = 'Dummy';
+            tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+          } else {
+            tile.textContent = val;
+            tile.classList.add(row === 0 ? (col <= 4 ? 'q-stand' : 'q-hold') : 'q-overflow');
+          }
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
           tile.dataset.val  = val;
@@ -300,6 +306,16 @@ function renderQueue() {
 
 function renderPool() {
   pGrid.innerHTML = '';
+  // Dummy tile — always first, never leaves the pool
+  const dummy = document.createElement('div');
+  dummy.className = 'tile';
+  dummy.textContent = 'Dummy';
+  dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+  dummy.dataset.role = 'dummy-src';
+  dummy.dataset.val  = 'dummy';
+  attachDrag(dummy, 'dummy-src', null, 'dummy');
+  pGrid.appendChild(dummy);
+
   [...pool].sort((a,b)=>a-b).forEach(num => {
     const tile = document.createElement('div');
     tile.className = 'tile pool';
@@ -428,12 +444,19 @@ function finishDrag() {
 
 function handleTap(el) {
   if (!el) return;
-  const role=el.dataset.role, val=parseInt(el.dataset.val);
-  if (role==='pool') {
+  const role=el.dataset.role, rawVal=el.dataset.val;
+  const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
+  if (role==='dummy-src') {
+    mutate(() => { queue.push('dummy'); });
+  } else if (role==='pool') {
     mutate(() => { pool.delete(val); queue.push(val); });
-  } else if (role==='queue'||role==='overflow') {
+  } else if (role==='queue') {
     const idx=parseInt(el.dataset.qidx);
-    mutate(() => { queue.splice(idx,1); pool.add(val); });
+    if (val === 'dummy') {
+      mutate(() => { queue.splice(idx,1); });
+    } else {
+      mutate(() => { queue.splice(idx,1); pool.add(val); });
+    }
   }
 }
 
@@ -443,15 +466,33 @@ function doDrop(target) {
   if (!target) return;
   const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
   const role=target.dataset.role, ti=parseInt(target.dataset.qidx);
+  const isDummy = (val === 'dummy');
+
+  // Dragging dummy from pool into queue
+  if (src==='dummy-src') {
+    if (role==='queue'||role==='overflow') { mutate(()=>{ queue.splice(ti,0,'dummy'); }); return; }
+    if (role==='empty') { mutate(()=>{ queue.splice(isNaN(ti)||ti>queue.length?queue.length:ti,0,'dummy'); }); return; }
+    if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('dummy'); }); return; }
+  }
   if (src==='pool') {
     if (role==='queue')  { mutate(()=>{ pool.delete(val); queue.splice(ti,0,val); }); return; }
     if (role==='empty')  { mutate(()=>{ pool.delete(val); queue.splice(isNaN(ti)||ti>queue.length?queue.length:ti,0,val); }); return; }
     if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }); return; }
   }
-  if (src==='queue'&&role==='zero')         { mutate(()=>{ queue.splice(si,1); pool.add(val); }); return; }
+  // Dragging dummy in queue to ZERO removes it (no pool add needed)
+  if (src==='queue'&&role==='zero') {
+    if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
+    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
+    return;
+  }
   if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }); return; }
   if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }); return; }
-  if (src==='queue'&&role==='pool')         { mutate(()=>{ queue.splice(si,1); pool.add(val); }); return; }
+  // Dragging queue tile back to pool area
+  if (src==='queue'&&(role==='pool'||role==='dummy-src')) {
+    if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
+    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
+    return;
+  }
 }
 
 function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
