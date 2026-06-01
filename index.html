@@ -83,7 +83,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: calc(var(--tile) * 0.28); font-weight: 700;
     position: relative;
-    transition: transform .1s, box-shadow .1s, opacity .1s;
+    transition: transform .15s, box-shadow .15s, opacity .15s, margin-left .15s, margin-right .15s;
     flex-shrink: 0; touch-action: none; cursor: grab;
   }
   .tile:active { cursor: grabbing; }
@@ -389,9 +389,7 @@ function onTouchMove(e) {
   } else {
     e.preventDefault();
     moveGhost(cx,cy);
-    clearDropHL();
-    const el=document.elementFromPoint(cx,cy)?.closest('.tile');
-    if (el&&el!==dnd.srcEl) { dnd.overEl=el; el.classList.add('drop-ok'); } else dnd.overEl=null;
+    updatePreview(cx,cy);
   }
 }
 
@@ -421,9 +419,7 @@ function commitDragFromPend(cx,cy) {
 function onMouseMove(e) {
   if (!dnd.active) return;
   const [cx,cy]=pt(e); moveGhost(cx,cy);
-  clearDropHL();
-  const el=document.elementFromPoint(cx,cy)?.closest('.tile');
-  if (el&&el!==dnd.srcEl) { dnd.overEl=el; el.classList.add('drop-ok'); } else dnd.overEl=null;
+  updatePreview(cx,cy);
 }
 
 function onMouseUp(e) {
@@ -437,7 +433,10 @@ function onMouseUp(e) {
 }
 
 function finishDrag() {
+  clearPreview();
   ghostEl.style.display='none'; clearDropHL();
+  // Reset any preview margins before re-render
+  qGrid.querySelectorAll('.tile[data-qidx]').forEach(t => t.style.marginLeft = '');
   dnd.srcEl?.classList.remove('dragging');
   Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
 }
@@ -475,8 +474,7 @@ function doDrop(target) {
     if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('dummy'); }); return; }
   }
   if (src==='pool') {
-    if (role==='queue')  { mutate(()=>{ pool.delete(val); queue.splice(ti,0,val); }); return; }
-    if (role==='empty')  { mutate(()=>{ pool.delete(val); queue.splice(isNaN(ti)||ti>queue.length?queue.length:ti,0,val); }); return; }
+    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }); return; }
     if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }); return; }
   }
   // Dragging dummy in queue to ZERO removes it (no pool add needed)
@@ -496,6 +494,58 @@ function doDrop(target) {
 }
 
 function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
+
+/* ── INSERT PREVIEW ── */
+let previewIdx = -1; // queue index where gap is shown (-1 = none)
+
+function updatePreview(cx, cy) {
+  if (!['queue','pool','dummy-src'].includes(dnd.source)) { clearPreview(); return; }
+
+  // Sample multiple points around the cursor to pierce through the ghost/gap
+  ghostEl.style.display = 'none';
+  const offsets = [[0,0],[0,-22],[0,22],[-22,0],[22,0]];
+  let el = null;
+  for (const [dx,dy] of offsets) {
+    const hit = document.elementFromPoint(cx+dx, cy+dy)?.closest(
+      '.tile[data-role="queue"],.tile[data-role="empty"],.tile[data-role="overflow"]'
+    );
+    if (hit && hit !== dnd.srcEl) { el = hit; break; }
+  }
+  ghostEl.style.display = 'flex';
+
+  // If over zero/load slot, clear
+  if (el && el.dataset.role === 'zero') { clearPreview(); return; }
+
+  if (el) {
+    const ti = parseInt(el.dataset.qidx);
+    if (!isNaN(ti) && ti !== previewIdx) {
+      previewIdx = ti;
+      applyPreview();
+    }
+    // same tile — hold steady
+  }
+  // No tile found = hovering the gap we created — hold steady, no update
+}
+
+function clearPreview() {
+  if (previewIdx === -1) return;
+  previewIdx = -1;
+  applyPreview();
+}
+
+function applyPreview() {
+  // All queue tiles: shift right if at/after previewIdx, to show a gap
+  const tiles = qGrid.querySelectorAll('.tile[data-qidx]');
+  tiles.forEach(t => {
+    const qi = parseInt(t.dataset.qidx);
+    const isSrc = (dnd.source === 'queue' && qi === dnd.srcIdx);
+    if (previewIdx >= 0 && qi === previewIdx && !isSrc) {
+      t.style.marginLeft = 'calc(var(--tile) + var(--gap) * 2)';
+    } else {
+      t.style.marginLeft = '';
+    }
+  });
+}
 </script>
 </body>
 </html>
