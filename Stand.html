@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Taxi Stand Queue</title>
+<style>
+  :root {
+    --bg: #2d1b69;
+    --stand: #1565c0;
+    --holding: #6a1b9a;
+    --highlight: #80d8ff;
+    --loading: #ffd600;
+    --overflow: rgba(128,216,255,.12);
+    --empty: rgba(255,255,255,0.07);
+    --tile: 60px;
+    --gap: 4px;
+    --r: 6px;
+    --label-w: 26px;
+    --pad: 10px;
+    --grphdr-h: 18px;
+    --colhdr-h: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { overflow-x: hidden; max-width: 100vw; }
+  body { background: var(--bg); min-height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; padding: var(--pad); }
+
+  h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--highlight); margin-bottom: 8px; opacity: 0.75; }
+  .divider { height: 1px; background: linear-gradient(90deg,transparent,rgba(128,216,255,.3),transparent); margin: 14px 0; }
+
+  /* sync indicator */
+  #sync-status {
+    position: fixed; top: 8px; right: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 8px; border-radius: 20px;
+    opacity: 0.85; transition: background .3s, opacity .3s;
+    pointer-events: none; z-index: 100;
+  }
+  #sync-status.ok      { background: rgba(0,200,100,.25); color: #69ffb0; }
+  #sync-status.saving  { background: rgba(255,214,0,.25);  color: #ffd600; }
+  #sync-status.error   { background: rgba(255,80,80,.25);  color: #ff8080; }
+
+  /* QUEUE LAYOUT */
+  #queue-wrapper { display: flex; flex-direction: row; gap: var(--gap); }
+  #row-labels {
+    display: flex; flex-direction: column; gap: var(--gap);
+    margin-top: calc(var(--grphdr-h) + var(--gap) + var(--colhdr-h) + var(--gap));
+    flex-shrink: 0;
+  }
+  .row-label {
+    width: var(--label-w); height: var(--tile);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 4px; font-size: 10px; font-weight: 700;
+    color: rgba(128,216,255,.6); letter-spacing: .5px; flex-shrink: 0;
+  }
+  #queue-cols { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+  #group-headers { display: flex; flex-direction: row; gap: var(--gap); height: var(--grphdr-h); }
+  .grp-spacer { flex-shrink: 0; }
+  .grp-label {
+    height: var(--grphdr-h);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+    text-transform: uppercase; border-radius: 3px; flex-shrink: 0;
+  }
+  .grp-stand   { background: rgba(21,101,192,.35);  color: #80d8ff; }
+  .grp-holding { background: rgba(106,27,154,.35);  color: #ce93d8; }
+  .col-headers { display: flex; flex-direction: row; gap: var(--gap); height: var(--colhdr-h); }
+  .col-header {
+    width: var(--tile); height: var(--colhdr-h);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: rgba(128,216,255,.55);
+    letter-spacing: .5px; flex-shrink: 0;
+  }
+  #queue-grid { display: flex; flex-direction: column; gap: var(--gap); }
+  .qrow { display: flex; flex-direction: row; gap: var(--gap); }
+  .qrow.new-row { animation: rowIn .22s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes rowIn { from { opacity:0; transform:translateY(-10px) scale(.96); } to { opacity:1; transform:none; } }
+
+  /* TILE */
+  .tile {
+    width: var(--tile); height: var(--tile);
+    border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--tile) * 0.28); font-weight: 700;
+    position: relative;
+    transition: transform .15s, box-shadow .15s, opacity .15s, margin-left .15s, margin-right .15s;
+    flex-shrink: 0; touch-action: none; cursor: grab;
+  }
+  .tile:active { cursor: grabbing; }
+  .tile.dragging { opacity: .25; transform: scale(.88); }
+  .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
+  .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
+
+  .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: default !important; }
+  .q-stand    { background: var(--stand);    box-shadow: 0 4px 14px rgba(21,101,192,.45); }
+  .q-hold     { background: var(--holding);  box-shadow: 0 4px 14px rgba(106,27,154,.45); }
+  .q-overflow { background: var(--overflow); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
+  .q-empty    { background: var(--empty); border: 1.5px dashed rgba(255,255,255,.13); cursor: default !important; }
+  .q-empty.hidden-slot { visibility: hidden; pointer-events: none; }
+
+  /* POOL */
+  #pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
+  .tile.pool { background: rgba(128,216,255,.12); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
+
+  /* GHOST */
+  #ghost {
+    position: fixed; pointer-events: none; z-index: 9999;
+    border-radius: var(--r); display: none;
+    align-items: center; justify-content: center; font-weight: 700;
+    width: var(--tile); height: var(--tile);
+    font-size: calc(var(--tile) * 0.28);
+    opacity: .92; box-shadow: 0 10px 30px rgba(0,0,0,.65);
+  }
+</style>
+</head>
+<body>
+
+<div id="sync-status" class="ok">LIVE</div>
+
+<section>
+  <h2>Queue</h2>
+  <div id="queue-wrapper">
+    <div id="row-labels"></div>
+    <div id="queue-cols">
+      <div id="group-headers"></div>
+      <div class="col-headers" id="col-headers"></div>
+      <div id="queue-grid"></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <h2>Not in Queue</h2>
+  <div id="pool-grid"></div>
+</section>
+
+<div id="ghost"></div>
+
+<script type="module">
+import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+/* ── FIREBASE ── */
+const app = initializeApp({
+  apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
+  databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com"
+});
+const db       = getDatabase(app);
+const queueRef = ref(db, 'queue');
+
+const syncEl = document.getElementById('sync-status');
+function setSync(state) {
+  syncEl.className = 'ok saving error'.split(' ').reduce((el,c)=>(el.classList.remove(c),el), syncEl) || syncEl;
+  syncEl.classList.add(state);
+  syncEl.textContent = state === 'ok' ? 'LIVE' : state === 'saving' ? 'SAVING…' : 'OFFLINE';
+}
+
+/* Debounce saves so rapid drags don't spam Firebase */
+let saveTimer = null;
+function saveToFirebase() {
+  setSync('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    set(queueRef, queue.length ? queue : null)
+      .then(() => setSync('ok'))
+      .catch(() => setSync('error'));
+  }, 300);
+}
+
+/* ── DYNAMIC TILE SIZING ── */
+function calcTileSize() {
+  const pad = 10 * 2, labelW = 26 + 4, cols = 10, gaps = (cols-1)*4;
+  const size = Math.floor((window.innerWidth - pad - labelW - gaps) / cols);
+  document.documentElement.style.setProperty('--tile', size + 'px');
+}
+calcTileSize();
+window.addEventListener('resize', () => { calcTileSize(); render(); });
+
+/* ── STATE ── */
+let queue = [];
+let pool  = new Set();
+for (let i = 1; i <= 140; i++) pool.add(i);
+
+/* Rebuild pool from queue */
+function rebuildPool(q) {
+  pool = new Set();
+  for (let i = 1; i <= 140; i++) pool.add(i);
+  for (const v of q) pool.delete(v);
+}
+
+/* ── LISTEN for remote changes ── */
+let ignoreNext = false; // skip re-render when we ourselves just saved
+onValue(queueRef, snapshot => {
+  const data = snapshot.val();
+  queue = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+  rebuildPool(queue);
+  render();
+});
+
+/* ── DOM ── */
+const qGrid      = document.getElementById('queue-grid');
+const qGrpHdrs   = document.getElementById('group-headers');
+const qColHdrs   = document.getElementById('col-headers');
+const qRowLabels = document.getElementById('row-labels');
+const pGrid      = document.getElementById('pool-grid');
+const ghostEl    = document.getElementById('ghost');
+
+/* ── RENDER ── */
+function render() { renderQueue(); renderPool(); }
+
+function renderQueue() {
+  const qLen = queue.length;
+  const rows = qLen < 9 ? 1 : 1 + Math.ceil((qLen - 9) / 10);
+  const prevRowCount = qGrid.querySelectorAll('.qrow').length;
+  qGrid.innerHTML = '';
+
+  const tileSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tile'));
+  const gap = 4;
+
+  /* Group headers */
+  qGrpHdrs.innerHTML = '';
+  const spacer = document.createElement('div');
+  spacer.className = 'grp-spacer';
+  spacer.style.width = tileSize + 'px';
+  qGrpHdrs.appendChild(spacer);
+  const standLbl = document.createElement('div');
+  standLbl.className = 'grp-label grp-stand';
+  standLbl.style.width = (4*tileSize + 3*gap) + 'px';
+  standLbl.textContent = 'Stand';
+  qGrpHdrs.appendChild(standLbl);
+  const gs = document.createElement('div');
+  gs.style.width = gap + 'px';
+  qGrpHdrs.appendChild(gs);
+  const holdLbl = document.createElement('div');
+  holdLbl.className = 'grp-label grp-holding';
+  holdLbl.style.width = (3*tileSize + 2*gap) + 'px';
+  holdLbl.textContent = 'Holding';
+  qGrpHdrs.appendChild(holdLbl);
+
+  /* Col headers */
+  qColHdrs.innerHTML = '';
+  qColHdrs.appendChild(Object.assign(document.createElement('div'), {className:'col-header'}));
+  for (let c = 1; c <= 9; c++) {
+    const ch = document.createElement('div');
+    ch.className = 'col-header'; ch.textContent = c;
+    qColHdrs.appendChild(ch);
+  }
+
+  /* Row labels */
+  qRowLabels.innerHTML = '';
+  for (let row = 0; row < rows; row++) {
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = (row+1)*10;
+    qRowLabels.appendChild(rl);
+  }
+
+  /* Tiles */
+  for (let row = 0; row < rows; row++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'qrow';
+    if (row >= prevRowCount) rowEl.classList.add('new-row');
+
+    for (let col = 0; col < 10; col++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+
+      if (row === 0 && col === 0) {
+        tile.classList.add('q-zero');
+        tile.style.fontSize = 'calc(var(--tile) * 0.13)';
+        tile.style.textAlign = 'center';
+        tile.style.lineHeight = '1.2';
+        tile.style.padding = '4px';
+        tile.textContent = 'Loaded or Dropped';
+        tile.dataset.role = 'zero';
+      } else {
+        const qIdx = row === 0 ? (col-1) : (9 + (row-1)*10 + col);
+        if (qIdx < queue.length) {
+          const val = queue[qIdx];
+          const isDummy = (val === 'dummy');
+          if (isDummy) {
+            tile.textContent = 'Filler';
+            tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+          } else {
+            tile.textContent = val;
+            tile.classList.add(row === 0 ? (col <= 4 ? 'q-stand' : col <= 7 ? 'q-hold' : 'q-overflow') : 'q-overflow');
+          }
+          tile.dataset.role = 'queue';
+          tile.dataset.qidx = qIdx;
+          tile.dataset.val  = val;
+          attachDrag(tile, 'queue', qIdx, val);
+        } else {
+          tile.classList.add('q-empty');
+          tile.dataset.role = 'empty';
+          tile.dataset.qidx = qIdx;
+          if (qIdx > queue.length) tile.classList.add('hidden-slot');
+        }
+      }
+      rowEl.appendChild(tile);
+    }
+    qGrid.appendChild(rowEl);
+  }
+}
+
+function renderPool() {
+  pGrid.innerHTML = '';
+  // Dummy tile — always first, never leaves the pool
+  const dummy = document.createElement('div');
+  dummy.className = 'tile';
+  dummy.textContent = 'Filler';
+  dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+  dummy.dataset.role = 'dummy-src';
+  dummy.dataset.val  = 'dummy';
+  attachDrag(dummy, 'dummy-src', null, 'dummy');
+  pGrid.appendChild(dummy);
+
+  [...pool].sort((a,b)=>a-b).forEach(num => {
+    const tile = document.createElement('div');
+    tile.className = 'tile pool';
+    tile.textContent = num;
+    tile.dataset.role = 'pool';
+    tile.dataset.val  = num;
+    attachDrag(tile, 'pool', null, num);
+    pGrid.appendChild(tile);
+  });
+}
+
+/* ── STATE MUTATORS (all call saveToFirebase) ── */
+function mutate(fn) { fn(); saveToFirebase(); render(); }
+
+/* ── DRAG & DROP ── */
+const TAP_THRESHOLD = 8;
+const dnd = { active:false, pending:false, val:null, source:null, srcIdx:null, srcEl:null, ox:0, oy:0, startX:0, startY:0, overEl:null };
+function pt(e) { const t = e.touches?.[0] ?? e; return [t.clientX, t.clientY]; }
+
+function attachDrag(el, source, idx, val) {
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    pendDrag(e, source, idx, val, el);
+    document.addEventListener('mousemove', onMouseMoveThresh);
+    document.addEventListener('mouseup',   onMouseUpThresh);
+  });
+  el.addEventListener('touchstart', e => {
+    pendDrag(e, source, idx, val, el);
+  }, {passive:true});
+}
+
+function onMouseMoveThresh(e) {
+  const [cx,cy] = pt(e);
+  if (!dnd.active) {
+    const dx=cx-dnd.startX, dy=cy-dnd.startY;
+    if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
+    commitDragFromPend(cx,cy);
+    document.removeEventListener('mousemove', onMouseMoveThresh);
+    document.addEventListener('mousemove', onMouseMove);
+  }
+}
+
+function onMouseUpThresh(e) {
+  document.removeEventListener('mousemove', onMouseMoveThresh);
+  document.removeEventListener('mouseup',   onMouseUpThresh);
+  if (!dnd.active) {
+    handleTap(dnd.srcEl);
+    Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
+  } else {
+    onMouseUp(e);
+  }
+}
+
+function pendDrag(e, source, idx, val, el) {
+  const [cx,cy] = pt(e);
+  const r = el.getBoundingClientRect();
+  dnd.pending=true; dnd.val=val; dnd.source=source; dnd.srcIdx=idx; dnd.srcEl=el;
+  dnd.ox=cx-r.left; dnd.oy=cy-r.top; dnd.startX=cx; dnd.startY=cy;
+  document.addEventListener('touchmove', onTouchMove, {passive:false});
+  document.addEventListener('touchend',  onTouchEnd);
+}
+
+function onTouchMove(e) {
+  const [cx,cy] = pt(e);
+  if (!dnd.active) {
+    const dx=cx-dnd.startX, dy=cy-dnd.startY;
+    if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
+    e.preventDefault();
+    commitDragFromPend(cx,cy);
+  } else {
+    e.preventDefault();
+    moveGhost(cx,cy);
+    updatePreview(cx,cy);
+  }
+}
+
+function onTouchEnd(e) {
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend',  onTouchEnd);
+  if (!dnd.active) {
+    dnd.pending=false;
+    handleTap(dnd.srcEl);
+    Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
+    return;
+  }
+  const gx=parseFloat(ghostEl.style.left)+dnd.ox, gy=parseFloat(ghostEl.style.top)+dnd.oy;
+  const target=dnd.overEl??document.elementFromPoint(gx,gy)?.closest('.tile');
+  doDrop(target);
+  finishDrag();
+}
+
+function commitDragFromPend(cx,cy) {
+  dnd.active=true; dnd.pending=false;
+  ghostEl.style.cssText=`background:${getComputedStyle(dnd.srcEl).backgroundColor};color:${getComputedStyle(dnd.srcEl).color};display:flex;`;
+  ghostEl.textContent=dnd.val;
+  moveGhost(cx,cy);
+  dnd.srcEl.classList.add('dragging');
+}
+
+function onMouseMove(e) {
+  if (!dnd.active) return;
+  const [cx,cy]=pt(e); moveGhost(cx,cy);
+  updatePreview(cx,cy);
+}
+
+function onMouseUp(e) {
+  document.removeEventListener('mousemove',onMouseMove);
+  document.removeEventListener('mouseup',  onMouseUp);
+  if (!dnd.active) return;
+  const gx=parseFloat(ghostEl.style.left)+dnd.ox, gy=parseFloat(ghostEl.style.top)+dnd.oy;
+  const target=dnd.overEl??document.elementFromPoint(gx,gy)?.closest('.tile');
+  doDrop(target);
+  finishDrag();
+}
+
+function finishDrag() {
+  clearPreview();
+  ghostEl.style.display='none'; clearDropHL();
+  // Reset any preview margins before re-render
+  qGrid.querySelectorAll('.tile[data-qidx]').forEach(t => t.style.marginLeft = '');
+  dnd.srcEl?.classList.remove('dragging');
+  Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
+}
+
+function handleTap(el) {
+  if (!el) return;
+  const role=el.dataset.role, rawVal=el.dataset.val;
+  const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
+  if (role==='dummy-src') {
+    mutate(() => { queue.push('dummy'); });
+  } else if (role==='pool') {
+    mutate(() => { pool.delete(val); queue.push(val); });
+  } else if (role==='queue') {
+    const idx=parseInt(el.dataset.qidx);
+    if (val === 'dummy') {
+      mutate(() => { queue.splice(idx,1); });
+    } else {
+      mutate(() => { queue.splice(idx,1); pool.add(val); });
+    }
+  }
+}
+
+function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=(y-dnd.oy)+'px'; }
+
+function doDrop(target) {
+  if (!target) return;
+  const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
+  const role=target.dataset.role, ti=parseInt(target.dataset.qidx);
+  const isDummy = (val === 'dummy');
+
+  // Dragging dummy from pool into queue
+  if (src==='dummy-src') {
+    if (role==='queue'||role==='overflow') { mutate(()=>{ queue.splice(ti,0,'dummy'); }); return; }
+    if (role==='empty') { mutate(()=>{ queue.splice(isNaN(ti)||ti>queue.length?queue.length:ti,0,'dummy'); }); return; }
+    if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('dummy'); }); return; }
+  }
+  if (src==='pool') {
+    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }); return; }
+    if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }); return; }
+  }
+  // Dragging dummy in queue to ZERO removes it (no pool add needed)
+  if (src==='queue'&&role==='zero') {
+    if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
+    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
+    return;
+  }
+  if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }); return; }
+  if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }); return; }
+  // Dragging queue tile back to pool area
+  if (src==='queue'&&(role==='pool'||role==='dummy-src')) {
+    if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
+    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
+    return;
+  }
+}
+
+function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
+
+/* ── INSERT PREVIEW ── */
+let previewIdx = -1; // queue index where gap is shown (-1 = none)
+
+function updatePreview(cx, cy) {
+  if (!['queue','pool','dummy-src'].includes(dnd.source)) { clearPreview(); return; }
+
+  // Sample multiple points around the cursor to pierce through the ghost/gap
+  ghostEl.style.display = 'none';
+  const offsets = [[0,0],[0,-22],[0,22],[-22,0],[22,0]];
+  let el = null;
+  for (const [dx,dy] of offsets) {
+    const hit = document.elementFromPoint(cx+dx, cy+dy)?.closest(
+      '.tile[data-role="queue"],.tile[data-role="empty"],.tile[data-role="overflow"]'
+    );
+    if (hit && hit !== dnd.srcEl) { el = hit; break; }
+  }
+  ghostEl.style.display = 'flex';
+
+  // If over zero/load slot, clear
+  if (el && el.dataset.role === 'zero') { clearPreview(); return; }
+
+  if (el) {
+    const ti = parseInt(el.dataset.qidx);
+    if (!isNaN(ti) && ti !== previewIdx) {
+      previewIdx = ti;
+      applyPreview();
+    }
+    // same tile — hold steady
+  }
+  // No tile found = hovering the gap we created — hold steady, no update
+}
+
+function clearPreview() {
+  if (previewIdx === -1) return;
+  previewIdx = -1;
+  applyPreview();
+}
+
+function applyPreview() {
+  // All queue tiles: shift right if at/after previewIdx, to show a gap
+  const tiles = qGrid.querySelectorAll('.tile[data-qidx]');
+  tiles.forEach(t => {
+    const qi = parseInt(t.dataset.qidx);
+    const isSrc = (dnd.source === 'queue' && qi === dnd.srcIdx);
+    if (previewIdx >= 0 && qi === previewIdx && !isSrc) {
+      t.style.marginLeft = 'calc(var(--tile) + var(--gap) * 2)';
+    } else {
+      t.style.marginLeft = '';
+    }
+  });
+}
+</script>
+</body>
+</html>
