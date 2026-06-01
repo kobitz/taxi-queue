@@ -258,7 +258,7 @@ function renderQueue() {
   qGrpHdrs.appendChild(spacer);
   const standLbl = document.createElement('div');
   standLbl.className = 'grp-label grp-stand';
-  standLbl.style.width = (Math.floor(COLS*0.4)*tileSize + (Math.floor(COLS*0.4)-1)*gap) + 'px';
+  standLbl.style.width = (4*tileSize + 3*gap) + 'px';
   standLbl.textContent = 'Stand';
   qGrpHdrs.appendChild(standLbl);
   const gs = document.createElement('div');
@@ -266,7 +266,7 @@ function renderQueue() {
   qGrpHdrs.appendChild(gs);
   const holdLbl = document.createElement('div');
   holdLbl.className = 'grp-label grp-holding';
-  holdLbl.style.width = (Math.floor(COLS*0.3)*tileSize + (Math.floor(COLS*0.3)-1)*gap) + 'px';
+  holdLbl.style.width = (3*tileSize + 2*gap) + 'px';
   holdLbl.textContent = 'Holding';
   qGrpHdrs.appendChild(holdLbl);
 
@@ -316,7 +316,7 @@ function renderQueue() {
             tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
           } else {
             tile.textContent = val;
-            tile.classList.add(row === 0 ? (col <= Math.floor(COLS*0.4) ? 'q-stand' : col <= Math.floor(COLS*0.7) ? 'q-hold' : 'q-overflow') : 'q-overflow');
+            tile.classList.add(qIdx < 4 ? 'q-stand' : qIdx < 7 ? 'q-hold' : 'q-overflow');
           }
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
