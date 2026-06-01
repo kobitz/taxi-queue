@@ -30,7 +30,7 @@
 
   /* sync indicator */
   #sync-status {
-    position: fixed; top: 8px; right: 10px;
+    position: fixed; top: 16px; right: 130px;
     font-size: 10px; font-weight: 700; letter-spacing: 1px;
     padding: 3px 8px; border-radius: 20px;
     opacity: 0.85; transition: background .3s, opacity .3s;
@@ -111,9 +111,24 @@
     font-size: calc(var(--tile) * 0.28);
     opacity: .92; box-shadow: 0 10px 30px rgba(0,0,0,.65);
   }
+
+  #zoom-btn {
+    position: fixed; top: 6px; right: 6px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 10px 14px; border-radius: 12px; min-width: 44px; min-height: 44px;
+    background: rgba(128,216,255,.15); color: #80d8ff;
+    border: 1.5px solid rgba(128,216,255,.3);
+    cursor: pointer; z-index: 100;
+    transition: background .2s;
+    line-height: 1;
+  }
+  #zoom-btn:hover { background: rgba(128,216,255,.28); }
+  #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
 </style>
 </head>
 <body>
+
+<button id="zoom-btn">Bigger Tiles</button>
 
 <div id="sync-status" class="ok">LIVE</div>
 
@@ -170,13 +185,29 @@ function saveToFirebase() {
 }
 
 /* ── DYNAMIC TILE SIZING ── */
+let COLS = parseInt(localStorage.getItem('taxi-cols') || '10');
+
 function calcTileSize() {
-  const pad = 10 * 2, labelW = 26 + 4, cols = 10, gaps = (cols-1)*4;
-  const size = Math.floor((window.innerWidth - pad - labelW - gaps) / cols);
+  const pad = 10*2, labelW = 26+4, gaps = (COLS-1)*4;
+  const size = Math.floor((window.innerWidth - pad - labelW - gaps) / COLS);
   document.documentElement.style.setProperty('--tile', size + 'px');
 }
 calcTileSize();
 window.addEventListener('resize', () => { calcTileSize(); render(); });
+
+const zoomBtn = document.getElementById('zoom-btn');
+// Sync button label to saved state on load
+zoomBtn.textContent = COLS === 5 ? 'Smaller Tiles' : 'Bigger Tiles';
+zoomBtn.classList.toggle('active', COLS === 5);
+
+zoomBtn.addEventListener('click', () => {
+  COLS = COLS === 10 ? 5 : 10;
+  localStorage.setItem('taxi-cols', COLS);
+  zoomBtn.textContent = COLS === 5 ? 'Smaller Tiles' : 'Bigger Tiles';
+  zoomBtn.classList.toggle('active', COLS === 5);
+  calcTileSize();
+  render();
+});
 
 /* ── STATE ── */
 let queue = [];
@@ -212,7 +243,7 @@ function render() { renderQueue(); renderPool(); }
 
 function renderQueue() {
   const qLen = queue.length;
-  const rows = qLen < 9 ? 1 : 1 + Math.ceil((qLen - 9) / 10);
+  const slotsPer = COLS - 1; const rows = qLen < slotsPer ? 1 : 1 + Math.ceil((qLen - slotsPer) / COLS);
   const prevRowCount = qGrid.querySelectorAll('.qrow').length;
   qGrid.innerHTML = '';
 
@@ -227,7 +258,7 @@ function renderQueue() {
   qGrpHdrs.appendChild(spacer);
   const standLbl = document.createElement('div');
   standLbl.className = 'grp-label grp-stand';
-  standLbl.style.width = (4*tileSize + 3*gap) + 'px';
+  standLbl.style.width = (Math.floor(COLS*0.4)*tileSize + (Math.floor(COLS*0.4)-1)*gap) + 'px';
   standLbl.textContent = 'Stand';
   qGrpHdrs.appendChild(standLbl);
   const gs = document.createElement('div');
@@ -235,14 +266,14 @@ function renderQueue() {
   qGrpHdrs.appendChild(gs);
   const holdLbl = document.createElement('div');
   holdLbl.className = 'grp-label grp-holding';
-  holdLbl.style.width = (3*tileSize + 2*gap) + 'px';
+  holdLbl.style.width = (Math.floor(COLS*0.3)*tileSize + (Math.floor(COLS*0.3)-1)*gap) + 'px';
   holdLbl.textContent = 'Holding';
   qGrpHdrs.appendChild(holdLbl);
 
   /* Col headers */
   qColHdrs.innerHTML = '';
   qColHdrs.appendChild(Object.assign(document.createElement('div'), {className:'col-header'}));
-  for (let c = 1; c <= 9; c++) {
+  for (let c = 1; c < COLS; c++) {
     const ch = document.createElement('div');
     ch.className = 'col-header'; ch.textContent = c;
     qColHdrs.appendChild(ch);
@@ -253,7 +284,7 @@ function renderQueue() {
   for (let row = 0; row < rows; row++) {
     const rl = document.createElement('div');
     rl.className = 'row-label';
-    rl.textContent = row === 0 ? 0 : row * 10;
+    rl.textContent = row === 0 ? 0 : row * COLS;
     qRowLabels.appendChild(rl);
   }
 
@@ -263,7 +294,7 @@ function renderQueue() {
     rowEl.className = 'qrow';
     if (row >= prevRowCount) rowEl.classList.add('new-row');
 
-    for (let col = 0; col < 10; col++) {
+    for (let col = 0; col < COLS; col++) {
       const tile = document.createElement('div');
       tile.className = 'tile';
 
@@ -276,7 +307,7 @@ function renderQueue() {
         tile.textContent = 'Loaded or Dropped';
         tile.dataset.role = 'zero';
       } else {
-        const qIdx = row === 0 ? (col-1) : (9 + (row-1)*10 + col);
+        const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
         if (qIdx < queue.length) {
           const val = queue[qIdx];
           const isDummy = (val === 'dummy');
@@ -285,7 +316,7 @@ function renderQueue() {
             tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
           } else {
             tile.textContent = val;
-            tile.classList.add(row === 0 ? (col <= 4 ? 'q-stand' : col <= 7 ? 'q-hold' : 'q-overflow') : 'q-overflow');
+            tile.classList.add(row === 0 ? (col <= Math.floor(COLS*0.4) ? 'q-stand' : col <= Math.floor(COLS*0.7) ? 'q-hold' : 'q-overflow') : 'q-overflow');
           }
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
@@ -306,6 +337,7 @@ function renderQueue() {
 
 function renderPool() {
   pGrid.innerHTML = '';
+  pGrid.style.gridTemplateColumns = `repeat(${COLS}, var(--tile))`;
   // Dummy tile — always first, never leaves the pool
   const dummy = document.createElement('div');
   dummy.className = 'tile';
