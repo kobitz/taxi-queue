@@ -91,7 +91,7 @@
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
-  .q-zero     { background: var(--loading);  color: #111; box-shadow: 0 4px 14px rgba(255,214,0,.4); cursor: default !important; }
+  .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: default !important; }
   .q-stand    { background: var(--stand);    box-shadow: 0 4px 14px rgba(21,101,192,.45); }
   .q-hold     { background: var(--holding);  box-shadow: 0 4px 14px rgba(106,27,154,.45); }
   .q-overflow { background: var(--overflow); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
@@ -281,7 +281,7 @@ function renderQueue() {
           const val = queue[qIdx];
           const isDummy = (val === 'dummy');
           if (isDummy) {
-            tile.textContent = 'Dummy';
+            tile.textContent = 'Filler';
             tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
           } else {
             tile.textContent = val;
@@ -309,7 +309,7 @@ function renderPool() {
   // Dummy tile — always first, never leaves the pool
   const dummy = document.createElement('div');
   dummy.className = 'tile';
-  dummy.textContent = 'Dummy';
+  dummy.textContent = 'Filler';
   dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
   dummy.dataset.role = 'dummy-src';
   dummy.dataset.val  = 'dummy';
