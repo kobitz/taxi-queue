@@ -28,7 +28,7 @@
   .divider { height: 1px; background: linear-gradient(90deg,transparent,rgba(128,216,255,.3),transparent); margin: 14px 0; }
 
   #sync-status {
-    position: fixed; top: 8px; right: 10px;
+    position: fixed; top: 16px; right: 130px;
     font-size: 10px; font-weight: 700; letter-spacing: 1px;
     padding: 3px 8px; border-radius: 20px;
     opacity: 0.85; pointer-events: none; z-index: 100;
@@ -95,13 +95,14 @@
   .tile.filler-src { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); font-size: calc(var(--tile)*0.16); }
 
   #zoom-btn {
-    position: fixed; top: 8px; right: 70px;
-    font-size: 10px; font-weight: 700; letter-spacing: 1px;
-    padding: 3px 8px; border-radius: 20px;
+    position: fixed; top: 6px; right: 6px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 10px 14px; border-radius: 12px; min-width: 44px; min-height: 44px;
     background: rgba(128,216,255,.15); color: #80d8ff;
-    border: 1px solid rgba(128,216,255,.3);
+    border: 1.5px solid rgba(128,216,255,.3);
     cursor: pointer; z-index: 100;
     transition: background .2s;
+    line-height: 1;
   }
   #zoom-btn:hover { background: rgba(128,216,255,.28); }
   #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
@@ -109,7 +110,7 @@
 </head>
 <body>
 
-<button id="zoom-btn">200%</button>
+<button id="zoom-btn">Bigger Tiles</button>
 
 <div id="sync-status" class="ok">LIVE</div>
 
@@ -146,7 +147,7 @@ const queueRef = ref(db, 'queue');
 const syncEl = document.getElementById('sync-status');
 
 /* ── SIZING ── */
-let COLS = 10;
+let COLS = parseInt(localStorage.getItem('taxi-cols') || '10');
 
 function calcTileSize() {
   const pad = 10*2, labelW = 26+4, gaps = (COLS-1)*4;
@@ -156,11 +157,16 @@ function calcTileSize() {
 calcTileSize();
 window.addEventListener('resize', () => { calcTileSize(); render(); });
 
-document.getElementById('zoom-btn').addEventListener('click', () => {
+const zoomBtn = document.getElementById('zoom-btn');
+// Sync button label to saved state on load
+zoomBtn.textContent = COLS === 5 ? 'Smaller Tiles' : 'Bigger Tiles';
+zoomBtn.classList.toggle('active', COLS === 5);
+
+zoomBtn.addEventListener('click', () => {
   COLS = COLS === 10 ? 5 : 10;
-  const btn = document.getElementById('zoom-btn');
-  btn.textContent = COLS === 5 ? '100%' : '200%';
-  btn.classList.toggle('active', COLS === 5);
+  localStorage.setItem('taxi-cols', COLS);
+  zoomBtn.textContent = COLS === 5 ? 'Smaller Tiles' : 'Bigger Tiles';
+  zoomBtn.classList.toggle('active', COLS === 5);
   calcTileSize();
   render();
 });
