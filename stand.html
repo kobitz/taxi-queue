@@ -155,7 +155,7 @@
 
 <script type="module">
 import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, set, push } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 /* ── FIREBASE ── */
 const app = initializeApp({
@@ -164,12 +164,31 @@ const app = initializeApp({
 });
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
+const historyRef = ref(db, 'history');
 
 const syncEl = document.getElementById('sync-status');
 function setSync(state) {
   syncEl.className = 'ok saving error'.split(' ').reduce((el,c)=>(el.classList.remove(c),el), syncEl) || syncEl;
   syncEl.classList.add(state);
   syncEl.textContent = state === 'ok' ? 'LIVE' : state === 'saving' ? 'SAVING…' : 'OFFLINE';
+}
+
+
+/* ── DEVICE NAME ── */
+let deviceName = localStorage.getItem('taxi-device-name');
+if (!deviceName) {
+  deviceName = prompt('Enter a name for this device (shown in history):', 'Device') || 'Unknown';
+  localStorage.setItem('taxi-device-name', deviceName);
+}
+
+/* ── LOG CHANGE ── */
+function logChange(action, value) {
+  push(historyRef, {
+    action,
+    value: String(value),
+    device: deviceName,
+    ts: Date.now()
+  });
 }
 
 /* Debounce saves so rapid drags don't spam Firebase */
@@ -363,7 +382,12 @@ function renderPool() {
 }
 
 /* ── STATE MUTATORS (all call saveToFirebase) ── */
-function mutate(fn) { fn(); saveToFirebase(); render(); }
+function mutate(fn, action, value) {
+  fn();
+  if (action && value !== undefined) logChange(action, value);
+  saveToFirebase();
+  render();
+}
 
 /* ── DRAG & DROP ── */
 const TAP_THRESHOLD = 8;
@@ -483,7 +507,7 @@ function handleTap(el) {
   if (role==='dummy-src') {
     mutate(() => { queue.push('dummy'); });
   } else if (role==='pool') {
-    mutate(() => { pool.delete(val); queue.push(val); });
+    mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
   } else if (role==='queue') {
     const idx=parseInt(el.dataset.qidx);
     if (val === 'dummy') {
@@ -509,17 +533,17 @@ function doDrop(target) {
     if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('dummy'); }); return; }
   }
   if (src==='pool') {
-    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }); return; }
-    if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }); return; }
+    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }, 'added', val); return; }
+    if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }, 'added', val); return; }
   }
   // Dragging dummy in queue to ZERO removes it (no pool add needed)
   if (src==='queue'&&role==='zero') {
-    if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
-    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
+    if (isDummy) { mutate(()=>{ queue.splice(si,1); }, 'loaded', 'Filler'); }
+    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'loaded', val); }
     return;
   }
-  if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }); return; }
-  if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }); return; }
+  if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }, 'moved', val); return; }
+  if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }, 'moved', val); return; }
   // Dragging queue tile back to pool area
   if (src==='queue'&&(role==='pool'||role==='dummy-src')) {
     if (isDummy) { mutate(()=>{ queue.splice(si,1); }); }
