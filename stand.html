@@ -176,13 +176,28 @@ function setSync(state) {
 
 
 /* ── DEVICE NAME ── */
-let deviceName = localStorage.getItem('taxi-device-name') || '';
+function getDeviceType() {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua))       return 'iPhone';
+  if (/iPad/.test(ua))         return 'iPad';
+  if (/Android/.test(ua))      return 'Android';
+  if (/Windows/.test(ua))      return 'Windows';
+  if (/Macintosh/.test(ua))    return 'Mac';
+  if (/Linux/.test(ua))        return 'Linux';
+  return 'Unknown Device';
+}
+
+let userName = localStorage.getItem('taxi-device-name') || '';
 
 function ensureDeviceName() {
-  if (deviceName) return;
-  const name = prompt('Enter a name for this device (shown in history):', '') || 'Unknown';
-  deviceName = name;
-  localStorage.setItem('taxi-device-name', deviceName);
+  if (userName) return;
+  const name = prompt('Enter your name (shown in history):', '') || 'Unknown';
+  userName = name;
+  localStorage.setItem('taxi-device-name', userName);
+}
+
+function getFullDeviceLabel() {
+  return `${userName} — ${getDeviceType()}`;
 }
 
 /* ── LOG CHANGE ── */
@@ -191,7 +206,7 @@ function logChange(action, value) {
   push(historyRef, {
     action,
     value: String(value),
-    device: deviceName,
+    device: getFullDeviceLabel(),
     ts: Date.now()
   });
 }
