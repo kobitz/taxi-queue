@@ -575,34 +575,63 @@ function handleTap(el) {
 function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=(y-dnd.oy)+'px'; }
 
 function doDrop(target) {
-  if (!target) return;
   const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
-  const role=target.dataset.role, ti=parseInt(target.dataset.qidx);
   const isDummy = (val === 'dummy');
 
-  // Dragging dummy from pool into queue
-  if (src==='dummy-src') {
-    if (role==='queue'||role==='overflow') { mutate(()=>{ queue.splice(ti,0,'dummy'); }, 'added', 'Filler'); return; }
-    if (role==='empty') { mutate(()=>{ queue.splice(isNaN(ti)||ti>queue.length?queue.length:ti,0,'dummy'); }, 'added', 'Filler'); return; }
-    if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('dummy'); }, 'added', 'Filler'); return; }
-  }
-  if (src==='pool') {
-    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }, 'added', val); return; }
-    if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }, 'added', val); return; }
-  }
-  // Dragging dummy in queue to ZERO removes it (no pool add needed)
-  if (src==='queue'&&role==='zero') {
-    if (isDummy) { mutate(()=>{ queue.splice(si,1); }, 'loaded', 'Filler'); }
-    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'loaded', val); }
+  // Use previewIdx as the canonical insertion point when set —
+  // this covers the full gap zone (original tile position + shifted position)
+  const ins = previewIdx >= 0 ? previewIdx : null;
+
+  const role = target?.dataset.role;
+  const ti   = parseInt(target?.dataset.qidx);
+
+  // ── Pool / filler-src → queue ──
+  if (src==='dummy-src' || src==='pool') {
+    const isF = src==='dummy-src';
+    const v   = isF ? 'dummy' : val;
+
+    if (ins !== null) {
+      // Dropped in the gap preview zone
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(ins,0,v); },
+             'added', isF?'Filler':val);
+      return;
+    }
+    if (role==='queue'||role==='empty') {
+      const idx = isNaN(ti)||ti>queue.length ? queue.length : ti;
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(idx,0,v); },
+             'added', isF?'Filler':val);
+      return;
+    }
+    if (target?.closest('#queue-wrapper')) {
+      mutate(()=>{ if(!isF) pool.delete(val); queue.push(v); },
+             'added', isF?'Filler':val);
+      return;
+    }
+    // Dropped back in pool area — do nothing (tap handles removal)
     return;
   }
-  if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }, 'moved', val); return; }
-  if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }, 'moved', val); return; }
-  // Dragging queue tile back to pool area
-  if (src==='queue'&&(role==='pool'||role==='dummy-src')) {
-    if (isDummy) { mutate(()=>{ queue.splice(si,1); }, 'removed', 'Filler'); }
-    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'removed', val); }
+
+  // ── Queue tile → zero/load slot ──
+  if (src==='queue' && role==='zero') {
+    if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'loaded', 'Filler');
+    else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'loaded', val);
     return;
+  }
+
+  // ── Queue tile → reorder ──
+  if (src==='queue') {
+    // Use previewIdx if set, otherwise fall back to target tile index
+    const dest = ins !== null ? ins : (!isNaN(ti) ? ti : null);
+    if (dest !== null && dest !== si) {
+      mutate(()=>{ queue.splice(si,1); queue.splice(dest>si?dest-1:dest,0,val); }, 'moved', val);
+      return;
+    }
+    // Dropped back on pool → remove
+    if (role==='pool'||role==='dummy-src') {
+      if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'removed', 'Filler');
+      else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'removed', val);
+      return;
+    }
   }
 }
 
