@@ -332,110 +332,295 @@ function renderPool() {
 }
 
 /* ── DRAG & DROP ── */
-const TAP_THRESHOLD = 8;
-const dnd = { active:false, pending:false, val:null, source:null, srcIdx:null, srcEl:null, ox:0, oy:0, startX:0, startY:0, overEl:null };
-function pt(e) { const t = e.touches?.[0] ?? e; return [t.clientX, t.clientY]; }
+const HOLD_MS = 350;
+const MOVE_PX = 10;
+
+const dnd = {
+  active: false,
+  srcEl: null, val: null, source: null, srcIdx: null,
+  ox: 0, oy: 0,
+  startX: 0, startY: 0,
+  holdTimer: null,
+  canceled: false,
+};
 
 function attachDrag(el, source, idx, val) {
+  // ── MOUSE (desktop) ──
+  el.addEventListener('dragstart', e => e.preventDefault());
   el.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
     e.preventDefault();
-    pendDrag(e, source, idx, val, el);
-    document.addEventListener('mousemove', onMouseMoveThresh);
-    document.addEventListener('mouseup',   onMouseUpThresh);
-  });
-  el.addEventListener('touchstart', e => {
-    pendDrag(e, source, idx, val, el);
-  }, {passive:true});
-}
-
-function onMouseMoveThresh(e) {
-  const [cx,cy] = pt(e);
-  if (!dnd.active) {
-    const dx=cx-dnd.startX, dy=cy-dnd.startY;
-    if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
-    commitDragFromPend(cx,cy);
-    document.removeEventListener('mousemove', onMouseMoveThresh);
+    const r = el.getBoundingClientRect();
+    Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
+      ox:e.clientX-r.left, oy:e.clientY-r.top,
+      startX:e.clientX, startY:e.clientY, active:false });
     document.addEventListener('mousemove', onMouseMove);
-  }
+    document.addEventListener('mouseup',   onMouseUp);
+  });
+
+  // ── TOUCH (mobile) — passive so scroll is never blocked ──
+  el.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    const r = el.getBoundingClientRect();
+    Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
+      ox:t.clientX-r.left, oy:t.clientY-r.top,
+      startX:t.clientX, startY:t.clientY, active:false });
+
+    // Hold timer — fires after HOLD_MS if finger hasn't moved much
+    dnd.holdTimer = setTimeout(() => {
+      if (!dnd.canceled) activateDrag(dnd.startX, dnd.startY);
+    }, HOLD_MS);
+
+    el.addEventListener('touchmove',   onTouchMove,   { passive:false });
+    document.addEventListener('touchend',    onTouchEnd,    { once:true });
+    document.addEventListener('touchcancel', onTouchCancel, { once:true });
+  }, { passive:true });
 }
 
-function onMouseUpThresh(e) {
-  document.removeEventListener('mousemove', onMouseMoveThresh);
-  document.removeEventListener('mouseup',   onMouseUpThresh);
-  if (!dnd.active) {
-    handleTap(dnd.srcEl);
-    Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
-  } else { onMouseUp(e); }
+// ── Activate drag (show ghost etc) ──
+function activateDrag(cx, cy) {
+  if (dnd.canceled) return;
+  dnd.active = true;
+  const el = dnd.srcEl;
+  const bg  = getComputedStyle(el).backgroundColor;
+  const col = getComputedStyle(el).color;
+  ghostEl.style.cssText = `background:${bg};color:${col};display:flex;`;
+  ghostEl.textContent = (dnd.val === 'filler') ? 'Filler' : dnd.val;
+  moveGhost(cx, cy);
+  el.classList.add('dragging');
 }
 
-function pendDrag(e, source, idx, val, el) {
-  const [cx,cy] = pt(e);
-  const r = el.getBoundingClientRect();
-  dnd.pending=true; dnd.val=val; dnd.source=source; dnd.srcIdx=idx; dnd.srcEl=el;
-  dnd.ox=cx-r.left; dnd.oy=cy-r.top; dnd.startX=cx; dnd.startY=cy;
-  document.addEventListener('touchmove', onTouchMove, {passive:false});
-  document.addEventListener('touchend',  onTouchEnd);
-}
-
-function onTouchMove(e) {
-  const [cx,cy] = pt(e);
-  if (!dnd.active) {
-    const dx=cx-dnd.startX, dy=cy-dnd.startY;
-    if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
-    e.preventDefault();
-    commitDragFromPend(cx,cy);
-  } else {
-    e.preventDefault();
-    moveGhost(cx,cy);
-    updatePreview(cx,cy);
-  }
-}
-
-function onTouchEnd(e) {
-  document.removeEventListener('touchmove', onTouchMove);
-  document.removeEventListener('touchend',  onTouchEnd);
-  if (!dnd.active) {
-    dnd.pending=false;
-    handleTap(dnd.srcEl);
-    Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
-    return;
-  }
-  const gx=parseFloat(ghostEl.style.left)+dnd.ox, gy=parseFloat(ghostEl.style.top)+dnd.oy;
-  const target=dnd.overEl??document.elementFromPoint(gx,gy)?.closest('.tile');
-  doDrop(target);
-  finishDrag();
-}
-
-function commitDragFromPend(cx,cy) {
-  dnd.active=true; dnd.pending=false;
-  ghostEl.style.cssText=`background:${getComputedStyle(dnd.srcEl).backgroundColor};color:${getComputedStyle(dnd.srcEl).color};display:flex;`;
-  ghostEl.textContent=dnd.val==='filler'?'Filler':dnd.val;
-  moveGhost(cx,cy);
-  dnd.srcEl.classList.add('dragging');
-}
-
+// ── MOUSE handlers ──
 function onMouseMove(e) {
-  if (!dnd.active) return;
-  const [cx,cy]=pt(e); moveGhost(cx,cy); updatePreview(cx,cy);
+  if (!dnd.active) {
+    const dx = e.clientX - dnd.startX, dy = e.clientY - dnd.startY;
+    if (Math.sqrt(dx*dx+dy*dy) > MOVE_PX) activateDrag(e.clientX, e.clientY);
+    else return;
+  }
+  moveGhost(e.clientX, e.clientY);
+  updatePreview(e.clientX, e.clientY);
 }
 
 function onMouseUp(e) {
-  document.removeEventListener('mousemove',onMouseMove);
-  document.removeEventListener('mouseup',  onMouseUp);
-  if (!dnd.active) return;
-  const gx=parseFloat(ghostEl.style.left)+dnd.ox, gy=parseFloat(ghostEl.style.top)+dnd.oy;
-  const target=dnd.overEl??document.elementFromPoint(gx,gy)?.closest('.tile');
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup',   onMouseUp);
+  if (!dnd.active) {
+    const el = dnd.srcEl;
+    resetDnd();
+    handleTap(el);
+    return;
+  }
+  ghostEl.style.display = 'none';
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.tile');
+  const el = dnd.srcEl;
+  // doDrop reads dnd state — call BEFORE resetDnd
   doDrop(target);
-  finishDrag();
+  finishDrag(el);
+  resetDnd();
 }
 
-function finishDrag() {
+// ── TOUCH handlers ──
+function onTouchMove(e) {
+  const t = e.touches[0];
+  const dx = t.clientX - dnd.startX, dy = t.clientY - dnd.startY;
+  if (!dnd.active) {
+    // Finger moved before hold fired — cancel drag, allow scroll
+    if (Math.sqrt(dx*dx+dy*dy) > MOVE_PX) {
+      clearTimeout(dnd.holdTimer);
+      dnd.canceled = true;
+      cancelTouchDrag();
+    }
+    // Don't preventDefault — let scroll happen freely
+    return;
+  }
+  // Drag is active — prevent scroll so ghost can move
+  e.preventDefault();
+  moveGhost(t.clientX, t.clientY);
+  updatePreview(t.clientX, t.clientY);
+}
+
+function onTouchEnd(e) {
+  clearTimeout(dnd.holdTimer);
+  dnd.srcEl?.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchcancel', onTouchCancel);
+  if (!dnd.active) {
+    const el = dnd.srcEl;
+    const wasCanceled = dnd.canceled;
+    resetDnd();
+    if (!wasCanceled) handleTap(el);
+    return;
+  }
+  const t = e.changedTouches[0];
+  const cx = t.clientX, cy = t.clientY;
+  // Hide ghost so elementFromPoint sees the tile underneath
+  ghostEl.style.display = 'none';
+  // Also temporarily hide the dragging tile so we see what's behind it
+  dnd.srcEl?.style.setProperty('visibility','hidden');
+  const target = document.elementFromPoint(cx, cy)?.closest('.tile');
+  dnd.srcEl?.style.removeProperty('visibility');
+  const el = dnd.srcEl;
+  doDrop(target);
+  finishDrag(el);
+  resetDnd();
+}
+
+function onTouchCancel() {
+  clearTimeout(dnd.holdTimer);
+  cancelTouchDrag();
+}
+
+function cancelTouchDrag() {
+  dnd.srcEl?.removeEventListener('touchmove',   onTouchMove);
+  document.removeEventListener('touchend',    onTouchEnd);
+  document.removeEventListener('touchcancel', onTouchCancel);
+  finishDrag(dnd.srcEl);
+  resetDnd();
+}
+
+function resetDnd() {
+  dnd.active=false; dnd.srcEl=null; dnd.val=null; dnd.source=null;
+  dnd.srcIdx=null; dnd.holdTimer=null; dnd.canceled=false;
+}
+
+function finishDrag(el) {
   clearPreview();
-  ghostEl.style.display='none';
+  ghostEl.style.display = 'none';
+  clearDropHL();
   qGrid.querySelectorAll('.tile[data-qidx]').forEach(t => t.style.marginLeft = '');
-  dnd.srcEl?.classList.remove('dragging');
-  Object.assign(dnd,{active:false,pending:false,val:null,source:null,srcIdx:null,srcEl:null,overEl:null});
+  el?.classList.remove('dragging', 'drag-ready');
+}
+
+
+function handleTap(el) {
+  if (!el) return;
+  const role=el.dataset.role, rawVal=el.dataset.val;
+  const val = rawVal === 'filler' ? 'filler' : parseInt(rawVal);
+  if (role==='filler-src') {
+    mutate(() => { queue.push('filler'); });
+  } else if (role==='pool') {
+    mutate(() => { pool.delete(val); queue.push(val); });
+  } else if (role==='queue') {
+    const idx=parseInt(el.dataset.qidx);
+    if (val === 'filler') {
+      mutate(() => { queue.splice(idx,1); });
+    } else {
+      mutate(() => { queue.splice(idx,1); pool.add(val); });
+    }
+  }
+}
+
+function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=(y-dnd.oy)+'px'; }
+
+function doDrop(target) {
+  const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
+  const isFiller = (val === 'filler');
+
+  // Use previewIdx as the canonical insertion point when set —
+  // this covers the full gap zone (original tile position + shifted position)
+  const ins = previewIdx >= 0 ? previewIdx : null;
+
+  const role = target?.dataset.role;
+  const ti   = parseInt(target?.dataset.qidx);
+
+  // ── Pool / filler-src → queue ──
+  if (src==='filler-src' || src==='pool') {
+    const isF = src==='filler-src';
+    const v   = isF ? 'filler' : val;
+
+    if (ins !== null) {
+      // Dropped in the gap preview zone
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(ins,0,v); });
+      return;
+    }
+    if (role==='queue'||role==='empty') {
+      const idx = isNaN(ti)||ti>queue.length ? queue.length : ti;
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(idx,0,v); });
+      return;
+    }
+    if (target?.closest('#queue-wrapper')) {
+      mutate(()=>{ if(!isF) pool.delete(val); queue.push(v); });
+      return;
+    }
+    // Dropped back in pool area — do nothing (tap handles removal)
+    return;
+  }
+
+  // ── Queue tile → zero/load slot ──
+  if (src==='queue' && role==='zero') {
+    if (isFiller) mutate(()=>{ queue.splice(si,1); });
+    else         mutate(()=>{ queue.splice(si,1); pool.add(val); });
+    return;
+  }
+
+  // ── Queue tile → reorder ──
+  if (src==='queue') {
+    // Use previewIdx if set, otherwise fall back to target tile index
+    const dest = ins !== null ? ins : (!isNaN(ti) ? ti : null);
+    if (dest !== null && dest !== si) {
+      mutate(()=>{ queue.splice(si,1); queue.splice(dest>si?dest-1:dest,0,val); });
+      return;
+    }
+    // Dropped back on pool → remove
+    if (role==='pool'||role==='filler-src') {
+      if (isFiller) mutate(()=>{ queue.splice(si,1); });
+      else         mutate(()=>{ queue.splice(si,1); pool.add(val); });
+      return;
+    }
+  }
+}
+
+function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
+
+/* ── INSERT PREVIEW ── */
+let previewIdx = -1; // queue index where gap is shown (-1 = none)
+
+function updatePreview(cx, cy) {
+  if (!['queue','pool','filler-src'].includes(dnd.source)) { clearPreview(); return; }
+
+  // Sample multiple points around the cursor to pierce through the ghost/gap
+  ghostEl.style.display = 'none';
+  const offsets = [[0,0],[0,-22],[0,22],[-22,0],[22,0]];
+  let el = null;
+  for (const [dx,dy] of offsets) {
+    const hit = document.elementFromPoint(cx+dx, cy+dy)?.closest(
+      '.tile[data-role="queue"],.tile[data-role="empty"]'
+    );
+    if (hit && hit !== dnd.srcEl) { el = hit; break; }
+  }
+  ghostEl.style.display = 'flex';
+
+  // If over zero/load slot, clear
+  if (el && el.dataset.role === 'zero') { clearPreview(); return; }
+
+  if (el) {
+    const ti = parseInt(el.dataset.qidx);
+    if (!isNaN(ti) && ti !== previewIdx) {
+      previewIdx = ti;
+      applyPreview();
+    }
+    // same tile — hold steady
+  }
+  // No tile found = hovering the gap we created — hold steady, no update
+}
+
+function clearPreview() {
+  if (previewIdx === -1) return;
+  previewIdx = -1;
+  applyPreview();
+}
+
+function applyPreview() {
+  // All queue tiles: shift right if at/after previewIdx, to show a gap
+  const tiles = qGrid.querySelectorAll('.tile[data-qidx]');
+  tiles.forEach(t => {
+    const qi = parseInt(t.dataset.qidx);
+    const isSrc = (dnd.source === 'queue' && qi === dnd.srcIdx);
+    if (previewIdx >= 0 && qi === previewIdx && !isSrc) {
+      t.style.marginLeft = 'calc(var(--tile) + var(--gap) * 2)';
+    } else {
+      t.style.marginLeft = '';
+    }
+  });
 }
 
 function handleTap(el) {
@@ -487,8 +672,6 @@ function doDrop(target) {
 function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
 
 /* ── INSERT PREVIEW ── */
-let previewIdx = -1;
-
 function updatePreview(cx, cy) {
   if (!['queue','pool','filler-src'].includes(dnd.source)) { clearPreview(); return; }
   ghostEl.style.display = 'none';
