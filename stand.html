@@ -84,7 +84,7 @@
     font-size: calc(var(--tile) * 0.28); font-weight: 700;
     position: relative;
     transition: transform .15s, box-shadow .15s, opacity .15s, margin-left .15s, margin-right .15s;
-    flex-shrink: 0; touch-action: none; cursor: grab;
+    flex-shrink: 0; cursor: grab;
   }
   .tile:active { cursor: grabbing; }
   .tile.dragging   { opacity: .25; transform: scale(.88); }
@@ -394,62 +394,54 @@ function mutate(fn, action, value) {
   render();
 }
 
-/* ── DRAG & DROP ──
-   Strategy: use pointercapture so one unified event path handles mouse + touch.
-   On touch, we require a 300ms hold (longpress) before drag activates —
-   any movement before the hold timer fires cancels the drag and lets scroll happen.
-   Taps (pointerdown + pointerup with no drag committed) always fire handleTap.
-──────────────────────────────────────────────────────────────────────────── */
-const HOLD_MS  = 300;  // ms hold to activate drag on touch
-const MOVE_PX  = 8;    // px movement threshold once hold is active
+/* ── DRAG & DROP ── */
+const HOLD_MS = 350;
+const MOVE_PX = 10;
 
 const dnd = {
-  active: false,    // drag is live
+  active: false,
   srcEl: null, val: null, source: null, srcIdx: null,
-  ox: 0, oy: 0,    // offset within tile
-  holdTimer: null,
+  ox: 0, oy: 0,
   startX: 0, startY: 0,
-  movedBeforeHold: false,  // finger moved before hold fired → scroll
+  holdTimer: null,
+  canceled: false,
 };
 
 function attachDrag(el, source, idx, val) {
-  el.addEventListener('pointerdown', e => {
-    if (e.button && e.button !== 0) return;
-    e.stopPropagation();
-
+  // ── MOUSE (desktop) ──
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
     const r = el.getBoundingClientRect();
-    dnd.srcEl   = el;
-    dnd.val     = val;
-    dnd.source  = source;
-    dnd.srcIdx  = idx;
-    dnd.ox      = e.clientX - r.left;
-    dnd.oy      = e.clientY - r.top;
-    dnd.startX  = e.clientX;
-    dnd.startY  = e.clientY;
-    dnd.active  = false;
-    dnd.movedBeforeHold = false;
-
-    if (e.pointerType === 'touch') {
-      // Touch: hold timer — don't preventDefault yet so scroll works
-      dnd.holdTimer = setTimeout(() => {
-        if (!dnd.movedBeforeHold) {
-          activateDrag(e.clientX, e.clientY);
-        }
-      }, HOLD_MS);
-    } else {
-      // Mouse: activate immediately
-      e.preventDefault();
-      activateDrag(e.clientX, e.clientY);
-    }
-
-    el.setPointerCapture(e.pointerId);
-    el.addEventListener('pointermove', onPointerMove);
-    el.addEventListener('pointerup',   onPointerUp);
-    el.addEventListener('pointercancel', onPointerCancel);
+    Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
+      ox:e.clientX-r.left, oy:e.clientY-r.top,
+      startX:e.clientX, startY:e.clientY, active:false });
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
   });
+
+  // ── TOUCH (mobile) — passive so scroll is never blocked ──
+  el.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    const r = el.getBoundingClientRect();
+    Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
+      ox:t.clientX-r.left, oy:t.clientY-r.top,
+      startX:t.clientX, startY:t.clientY, active:false });
+
+    // Hold timer — fires after HOLD_MS if finger hasn't moved much
+    dnd.holdTimer = setTimeout(() => {
+      if (!dnd.canceled) activateDrag(dnd.startX, dnd.startY);
+    }, HOLD_MS);
+
+    el.addEventListener('touchmove',   onTouchMove,   { passive:true });
+    el.addEventListener('touchend',    onTouchEnd,    { once:true });
+    el.addEventListener('touchcancel', onTouchCancel, { once:true });
+  }, { passive:true });
 }
 
+// ── Activate drag (show ghost etc) ──
 function activateDrag(cx, cy) {
+  if (dnd.canceled) return;
   dnd.active = true;
   const el = dnd.srcEl;
   const bg  = getComputedStyle(el).backgroundColor;
@@ -457,71 +449,95 @@ function activateDrag(cx, cy) {
   ghostEl.style.cssText = `background:${bg};color:${col};display:flex;`;
   ghostEl.textContent = (dnd.val === 'dummy') ? 'Filler' : dnd.val;
   moveGhost(cx, cy);
-  el.classList.add('drag-ready');
-  setTimeout(() => {
-    if (dnd.active) el.classList.replace('drag-ready','dragging');
-  }, 0);
+  el.classList.add('dragging');
 }
 
-function onPointerMove(e) {
-  const cx = e.clientX, cy = e.clientY;
-  const dx = cx - dnd.startX, dy = cy - dnd.startY;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-
+// ── MOUSE handlers ──
+function onMouseMove(e) {
   if (!dnd.active) {
-    if (e.pointerType === 'touch' && dist > MOVE_PX) {
-      // Moved before hold fired — cancel drag, allow scroll
-      dnd.movedBeforeHold = true;
+    const dx = e.clientX - dnd.startX, dy = e.clientY - dnd.startY;
+    if (Math.sqrt(dx*dx+dy*dy) > MOVE_PX) activateDrag(e.clientX, e.clientY);
+    else return;
+  }
+  moveGhost(e.clientX, e.clientY);
+  updatePreview(e.clientX, e.clientY);
+}
+
+function onMouseUp(e) {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup',   onMouseUp);
+  if (!dnd.active) {
+    handleTap(dnd.srcEl);
+    resetDnd(); return;
+  }
+  ghostEl.style.display = 'none';
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.tile');
+  const el = dnd.srcEl;
+  resetDnd();
+  doDrop(target);
+  finishDrag(el);
+}
+
+// ── TOUCH handlers ──
+function onTouchMove(e) {
+  const t = e.touches[0];
+  const dx = t.clientX - dnd.startX, dy = t.clientY - dnd.startY;
+  if (!dnd.active) {
+    // If finger moves before hold fires, cancel drag so scroll works freely
+    if (Math.sqrt(dx*dx+dy*dy) > MOVE_PX) {
       clearTimeout(dnd.holdTimer);
-      cleanup(e);
+      dnd.canceled = true;
+      cancelTouchDrag();
     }
     return;
   }
-
-  e.preventDefault();
-  moveGhost(cx, cy);
-  updatePreview(cx, cy);
+  moveGhost(t.clientX, t.clientY);
+  updatePreview(t.clientX, t.clientY);
 }
 
-function onPointerUp(e) {
+function onTouchEnd(e) {
   clearTimeout(dnd.holdTimer);
+  dnd.srcEl?.removeEventListener('touchmove',   onTouchMove);
+  dnd.srcEl?.removeEventListener('touchcancel', onTouchCancel);
   if (!dnd.active) {
-    // Tap
-    const el = dnd.srcEl;
-    cleanup(e);
-    handleTap(el);
-    return;
+    if (!dnd.canceled) handleTap(dnd.srcEl);
+    resetDnd(); return;
   }
-  // Drop
+  const t = e.changedTouches[0];
   ghostEl.style.display = 'none';
-  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.tile');
-  cleanup(e);
+  const target = document.elementFromPoint(t.clientX, t.clientY)?.closest('.tile');
+  const el = dnd.srcEl;
+  resetDnd();
   doDrop(target);
-  finishDrag();
+  finishDrag(el);
 }
 
-function onPointerCancel(e) {
+function onTouchCancel() {
   clearTimeout(dnd.holdTimer);
-  cleanup(e);
-  finishDrag();
+  cancelTouchDrag();
 }
 
-function cleanup(e) {
-  try { dnd.srcEl?.releasePointerCapture(e.pointerId); } catch(_) {}
-  dnd.srcEl?.removeEventListener('pointermove',   onPointerMove);
-  dnd.srcEl?.removeEventListener('pointerup',     onPointerUp);
-  dnd.srcEl?.removeEventListener('pointercancel', onPointerCancel);
-  dnd.srcEl?.classList.remove('drag-ready', 'dragging');
+function cancelTouchDrag() {
+  dnd.srcEl?.removeEventListener('touchmove',   onTouchMove);
+  dnd.srcEl?.removeEventListener('touchend',    onTouchEnd);
+  dnd.srcEl?.removeEventListener('touchcancel', onTouchCancel);
+  finishDrag(dnd.srcEl);
+  resetDnd();
 }
 
-function finishDrag() {
+function resetDnd() {
+  dnd.active=false; dnd.srcEl=null; dnd.val=null; dnd.source=null;
+  dnd.srcIdx=null; dnd.holdTimer=null; dnd.canceled=false;
+}
+
+function finishDrag(el) {
   clearPreview();
   ghostEl.style.display = 'none';
   clearDropHL();
   qGrid.querySelectorAll('.tile[data-qidx]').forEach(t => t.style.marginLeft = '');
-  dnd.srcEl?.classList.remove('drag-ready', 'dragging');
-  dnd.active = false; dnd.srcEl = null;
+  el?.classList.remove('dragging', 'drag-ready');
 }
+
 
 function handleTap(el) {
   if (!el) return;
