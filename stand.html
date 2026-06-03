@@ -390,8 +390,9 @@ function mutate(fn, action, value) {
 }
 
 /* ── DRAG & DROP ── */
-const TAP_THRESHOLD = 8;
-const dnd = { active:false, pending:false, val:null, source:null, srcIdx:null, srcEl:null, ox:0, oy:0, startX:0, startY:0, overEl:null };
+const TAP_THRESHOLD = 12;   // px movement before drag commits
+const DRAG_DELAY    = 180;  // ms hold before movement can commit drag
+const dnd = { active:false, pending:false, val:null, source:null, srcIdx:null, srcEl:null, ox:0, oy:0, startX:0, startY:0, startT:0, overEl:null };
 function pt(e) { const t = e.touches?.[0] ?? e; return [t.clientX, t.clientY]; }
 
 function attachDrag(el, source, idx, val) {
@@ -412,6 +413,7 @@ function onMouseMoveThresh(e) {
   if (!dnd.active) {
     const dx=cx-dnd.startX, dy=cy-dnd.startY;
     if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
+    // Mouse doesn't need time delay — no scroll conflict
     commitDragFromPend(cx,cy);
     document.removeEventListener('mousemove', onMouseMoveThresh);
     document.addEventListener('mousemove', onMouseMove);
@@ -433,7 +435,7 @@ function pendDrag(e, source, idx, val, el) {
   const [cx,cy] = pt(e);
   const r = el.getBoundingClientRect();
   dnd.pending=true; dnd.val=val; dnd.source=source; dnd.srcIdx=idx; dnd.srcEl=el;
-  dnd.ox=cx-r.left; dnd.oy=cy-r.top; dnd.startX=cx; dnd.startY=cy;
+  dnd.ox=cx-r.left; dnd.oy=cy-r.top; dnd.startX=cx; dnd.startY=cy; dnd.startT=Date.now();
   document.addEventListener('touchmove', onTouchMove, {passive:false});
   document.addEventListener('touchend',  onTouchEnd);
 }
@@ -442,7 +444,12 @@ function onTouchMove(e) {
   const [cx,cy] = pt(e);
   if (!dnd.active) {
     const dx=cx-dnd.startX, dy=cy-dnd.startY;
-    if (Math.sqrt(dx*dx+dy*dy) < TAP_THRESHOLD) return;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    const held = Date.now() - dnd.startT;
+    // Only commit drag if held long enough AND moved enough
+    // If moving mostly vertically and not held long, let scroll through
+    if (dist < TAP_THRESHOLD) return;
+    if (held < DRAG_DELAY && Math.abs(dy) > Math.abs(dx)) return; // vertical scroll intent
     e.preventDefault();
     commitDragFromPend(cx,cy);
   } else {
