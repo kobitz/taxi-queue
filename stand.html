@@ -528,9 +528,9 @@ function handleTap(el) {
   } else if (role==='queue') {
     const idx=parseInt(el.dataset.qidx);
     if (val === 'dummy') {
-      mutate(() => { queue.splice(idx,1); });
+      mutate(() => { queue.splice(idx,1); }, 'removed', 'Filler');
     } else {
-      mutate(() => { queue.splice(idx,1); pool.add(val); });
+      mutate(() => { queue.splice(idx,1); pool.add(val); }, 'removed', val);
     }
   }
 }
