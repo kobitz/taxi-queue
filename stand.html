@@ -435,8 +435,8 @@ function attachDrag(el, source, idx, val) {
     }, HOLD_MS);
 
     el.addEventListener('touchmove',   onTouchMove,   { passive:false });
-    el.addEventListener('touchend',    onTouchEnd,    { once:true });
-    el.addEventListener('touchcancel', onTouchCancel, { once:true });
+    document.addEventListener('touchend',    onTouchEnd,    { once:true });
+    document.addEventListener('touchcancel', onTouchCancel, { once:true });
   }, { passive:true });
 }
 
@@ -504,8 +504,8 @@ function onTouchMove(e) {
 
 function onTouchEnd(e) {
   clearTimeout(dnd.holdTimer);
-  dnd.srcEl?.removeEventListener('touchmove',   onTouchMove);
-  dnd.srcEl?.removeEventListener('touchcancel', onTouchCancel);
+  dnd.srcEl?.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchcancel', onTouchCancel);
   if (!dnd.active) {
     const el = dnd.srcEl;
     const wasCanceled = dnd.canceled;
@@ -534,8 +534,8 @@ function onTouchCancel() {
 
 function cancelTouchDrag() {
   dnd.srcEl?.removeEventListener('touchmove',   onTouchMove);
-  dnd.srcEl?.removeEventListener('touchend',    onTouchEnd);
-  dnd.srcEl?.removeEventListener('touchcancel', onTouchCancel);
+  document.removeEventListener('touchend',    onTouchEnd);
+  document.removeEventListener('touchcancel', onTouchCancel);
   finishDrag(dnd.srcEl);
   resetDnd();
 }
@@ -620,7 +620,7 @@ function updatePreview(cx, cy) {
   let el = null;
   for (const [dx,dy] of offsets) {
     const hit = document.elementFromPoint(cx+dx, cy+dy)?.closest(
-      '.tile[data-role="queue"],.tile[data-role="empty"],.tile[data-role="overflow"]'
+      '.tile[data-role="queue"],.tile[data-role="empty"]'
     );
     if (hit && hit !== dnd.srcEl) { el = hit; break; }
   }
