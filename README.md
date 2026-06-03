@@ -23,7 +23,7 @@ Hosted at: `https://kobitz.github.io/taxi-queue`
 
 The queue is displayed as a grid of numbered tiles. Each row holds up to 10 positions (or 5 in Bigger Tiles mode).
 
-- **Yellow "Loaded or Dropped" tile** — the first slot. Drag any queue tile onto it to remove it from the queue.
+- **Grey "Loaded or Dropped" tile** — the first slot. Drag any queue tile onto it to remove it from the queue.
 - **Blue tiles (positions 1–4)** — Stand
 - **Purple tiles (positions 5–7)** — Holding
 - **Light blue tiles (positions 8+, and all overflow rows)** — general queue
