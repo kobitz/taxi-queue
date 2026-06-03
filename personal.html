@@ -10,6 +10,7 @@
     --stand: #1565c0;
     --holding: #6a1b9a;
     --highlight: #80d8ff;
+    --loading: #ffd600;
     --overflow: rgba(128,216,255,.12);
     --empty: rgba(255,255,255,0.07);
     --tile: 60px;
@@ -20,22 +21,24 @@
     --grphdr-h: 18px;
     --colhdr-h: 20px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
   html, body { overflow-x: hidden; max-width: 100vw; touch-action: manipulation; }
   body { background: var(--bg); min-height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; padding: var(--pad); }
 
   h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--highlight); margin-bottom: 8px; opacity: 0.75; }
   .divider { height: 1px; background: linear-gradient(90deg,transparent,rgba(128,216,255,.3),transparent); margin: 14px 0; }
 
-  #save-status {
+  /* sync indicator */
+  #sync-status {
     position: fixed; top: 16px; right: 130px;
     font-size: 10px; font-weight: 700; letter-spacing: 1px;
     padding: 3px 8px; border-radius: 20px;
     opacity: 0.85; transition: background .3s, opacity .3s;
     pointer-events: none; z-index: 100;
   }
-  #save-status.ok     { background: rgba(0,200,100,.25); color: #69ffb0; }
-  #save-status.saving { background: rgba(255,214,0,.25);  color: #ffd600; }
+  #sync-status.ok      { background: rgba(0,200,100,.25); color: #69ffb0; }
+  #sync-status.saving  { background: rgba(255,214,0,.25);  color: #ffd600; }
+  #sync-status.error   { background: rgba(255,80,80,.25);  color: #ff8080; }
 
   /* QUEUE LAYOUT */
   #queue-wrapper { display: flex; flex-direction: row; gap: var(--gap); }
@@ -59,8 +62,8 @@
     font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
     text-transform: uppercase; border-radius: 3px; flex-shrink: 0;
   }
-  .grp-stand   { background: rgba(21,101,192,.35); color: #80d8ff; }
-  .grp-holding { background: rgba(106,27,154,.35); color: #ce93d8; }
+  .grp-stand   { background: rgba(21,101,192,.35);  color: #80d8ff; }
+  .grp-holding { background: rgba(106,27,154,.35);  color: #ce93d8; }
   .col-headers { display: flex; flex-direction: row; gap: var(--gap); height: var(--colhdr-h); }
   .col-header {
     width: var(--tile); height: var(--colhdr-h);
@@ -73,6 +76,7 @@
   .qrow.new-row { animation: rowIn .22s cubic-bezier(.34,1.56,.64,1); }
   @keyframes rowIn { from { opacity:0; transform:translateY(-10px) scale(.96); } to { opacity:1; transform:none; } }
 
+  /* TILE */
   .tile {
     width: var(--tile); height: var(--tile);
     border-radius: var(--r);
@@ -80,10 +84,11 @@
     font-size: calc(var(--tile) * 0.28); font-weight: 700;
     position: relative;
     transition: transform .15s, box-shadow .15s, opacity .15s, margin-left .15s, margin-right .15s;
-    flex-shrink: 0; touch-action: none; cursor: grab;
+    flex-shrink: 0; cursor: grab;
   }
   .tile:active { cursor: grabbing; }
-  .tile.dragging { opacity: .25; transform: scale(.88); }
+  .tile.dragging   { opacity: .25; transform: scale(.88); }
+  .tile.drag-ready { transform: scale(1.05); box-shadow: 0 0 0 2px var(--highlight); transition: transform .15s, box-shadow .15s; }
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
@@ -94,9 +99,11 @@
   .q-empty    { background: var(--empty); border: 1.5px dashed rgba(255,255,255,.13); cursor: default !important; }
   .q-empty.hidden-slot { visibility: hidden; pointer-events: none; }
 
+  /* POOL */
   #pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
   .tile.pool { background: rgba(128,216,255,.12); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
 
+  /* GHOST */
   #ghost {
     position: fixed; pointer-events: none; z-index: 9999;
     border-radius: var(--r); display: none;
@@ -124,7 +131,7 @@
 
 <button id="zoom-btn">Bigger Tiles</button>
 
-<div id="save-status" class="ok">SAVED</div>
+<div id="sync-status" class="ok">SAVED</div>
 
 <section>
   <h2>Queue</h2>
@@ -148,27 +155,33 @@
 <div id="ghost"></div>
 
 <script>
+
 /* ── LOCAL STORAGE ── */
 const STORAGE_KEY = 'taxi-queue-personal';
+const syncEl = document.getElementById('sync-status');
+function setSync(state) {
+  syncEl.className = 'ok saving error'.split(' ').reduce((el,c)=>(el.classList.remove(c),el), syncEl) || syncEl;
+  syncEl.classList.add(state);
+  syncEl.textContent = state === 'ok' ? 'SAVED' : state === 'saving' ? 'SAVING…' : 'ERROR';
+}
 
-function saveLocal() {
-  const statusEl = document.getElementById('save-status');
-  statusEl.className = 'saving'; statusEl.textContent = 'SAVING…';
-  clearTimeout(saveLocal._t);
-  saveLocal._t = setTimeout(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-    statusEl.className = 'ok'; statusEl.textContent = 'SAVED';
+
+/* ── NO HISTORY IN PERSONAL VERSION ── */
+
+/* ── SAVE TO LOCALSTORAGE ── */
+let saveTimer = null;
+function saveToFirebase() {  // kept same name so rest of code works unchanged
+  setSync('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+      setSync('ok');
+    } catch(e) { setSync('error'); }
   }, 300);
 }
 
-function loadLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-/* ── SIZING ── */
+/* ── DYNAMIC TILE SIZING ── */
 let COLS = parseInt(localStorage.getItem('taxi-cols') || '10');
 
 function calcTileSize() {
@@ -196,16 +209,25 @@ zoomBtn.addEventListener('click', () => {
 });
 
 /* ── STATE ── */
-let queue = loadLocal();
+let queue = [];
 let pool  = new Set();
 for (let i = 1; i <= 140; i++) pool.add(i);
 
+/* Rebuild pool from queue */
 function rebuildPool(q) {
   pool = new Set();
   for (let i = 1; i <= 140; i++) pool.add(i);
-  for (const v of q) if (v !== 'filler') pool.delete(v);
+  for (const v of q) pool.delete(v);
 }
-rebuildPool(queue);
+
+/* ── LOAD FROM LOCALSTORAGE ── */
+try {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    queue = JSON.parse(raw);
+    rebuildPool(queue);
+  }
+} catch(e) { queue = []; }
 
 /* ── DOM ── */
 const qGrid      = document.getElementById('queue-grid');
@@ -214,9 +236,6 @@ const qColHdrs   = document.getElementById('col-headers');
 const qRowLabels = document.getElementById('row-labels');
 const pGrid      = document.getElementById('pool-grid');
 const ghostEl    = document.getElementById('ghost');
-
-/* ── MUTATE ── */
-function mutate(fn) { fn(); rebuildPool(queue); saveLocal(); render(); }
 
 /* ── RENDER ── */
 function render() { renderQueue(); renderPool(); }
@@ -230,16 +249,19 @@ function renderQueue() {
   const tileSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tile'));
   const gap = 4;
 
+  /* Group headers */
   qGrpHdrs.innerHTML = '';
   const spacer = document.createElement('div');
-  spacer.className = 'grp-spacer'; spacer.style.width = tileSize + 'px';
+  spacer.className = 'grp-spacer';
+  spacer.style.width = tileSize + 'px';
   qGrpHdrs.appendChild(spacer);
   const standLbl = document.createElement('div');
   standLbl.className = 'grp-label grp-stand';
   standLbl.style.width = (4*tileSize + 3*gap) + 'px';
   standLbl.textContent = 'Stand';
   qGrpHdrs.appendChild(standLbl);
-  const gs = document.createElement('div'); gs.style.width = gap + 'px';
+  const gs = document.createElement('div');
+  gs.style.width = gap + 'px';
   qGrpHdrs.appendChild(gs);
   const holdLbl = document.createElement('div');
   holdLbl.className = 'grp-label grp-holding';
@@ -247,6 +269,7 @@ function renderQueue() {
   holdLbl.textContent = 'Holding';
   qGrpHdrs.appendChild(holdLbl);
 
+  /* Col headers */
   qColHdrs.innerHTML = '';
   qColHdrs.appendChild(Object.assign(document.createElement('div'), {className:'col-header'}));
   for (let c = 1; c < COLS; c++) {
@@ -255,13 +278,17 @@ function renderQueue() {
     qColHdrs.appendChild(ch);
   }
 
+  /* Row labels */
   qRowLabels.innerHTML = '';
+  qRowLabels.style.display = rows <= 1 ? 'none' : 'flex';
   for (let row = 0; row < rows; row++) {
     const rl = document.createElement('div');
-    rl.className = 'row-label'; rl.textContent = row === 0 ? '' : row * COLS;
+    rl.className = 'row-label';
+    rl.textContent = row === 0 ? '' : row * COLS;
     qRowLabels.appendChild(rl);
   }
 
+  /* Tiles */
   for (let row = 0; row < rows; row++) {
     const rowEl = document.createElement('div');
     rowEl.className = 'qrow';
@@ -283,8 +310,8 @@ function renderQueue() {
         const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
         if (qIdx < queue.length) {
           const val = queue[qIdx];
-          const isFiller = (val === 'filler');
-          if (isFiller) {
+          const isDummy = (val === 'filler');
+          if (isDummy) {
             tile.textContent = 'Filler';
             tile.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
           } else {
@@ -311,14 +338,15 @@ function renderQueue() {
 function renderPool() {
   pGrid.innerHTML = '';
   pGrid.style.gridTemplateColumns = `repeat(${COLS}, var(--tile))`;
-  const filler = document.createElement('div');
-  filler.className = 'tile';
-  filler.textContent = 'Filler';
-  filler.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
-  filler.dataset.role = 'filler-src';
-  filler.dataset.val  = 'filler';
-  attachDrag(filler, 'filler-src', null, 'filler');
-  pGrid.appendChild(filler);
+  // Dummy tile — always first, never leaves the pool
+  const dummy = document.createElement('div');
+  dummy.className = 'tile';
+  dummy.textContent = 'Filler';
+  dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+  dummy.dataset.role = 'filler-src';
+  dummy.dataset.val  = 'filler';
+  attachDrag(dummy, 'filler-src', null, 'dummy');
+  pGrid.appendChild(dummy);
 
   [...pool].sort((a,b)=>a-b).forEach(num => {
     const tile = document.createElement('div');
@@ -329,6 +357,14 @@ function renderPool() {
     attachDrag(tile, 'pool', null, num);
     pGrid.appendChild(tile);
   });
+}
+
+/* ── STATE MUTATORS ── */
+function mutate(fn) {
+  fn();
+  rebuildPool(queue);
+  saveToFirebase();
+  render();
 }
 
 /* ── DRAG & DROP ── */
@@ -494,17 +530,17 @@ function finishDrag(el) {
 function handleTap(el) {
   if (!el) return;
   const role=el.dataset.role, rawVal=el.dataset.val;
-  const val = rawVal === 'filler' ? 'filler' : parseInt(rawVal);
+  const val = rawVal === 'filler' ? 'dummy' : parseInt(rawVal);
   if (role==='filler-src') {
-    mutate(() => { queue.push('filler'); });
+    mutate(() => { queue.push('filler'); }, 'added', 'Filler');
   } else if (role==='pool') {
-    mutate(() => { pool.delete(val); queue.push(val); });
+    mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
   } else if (role==='queue') {
     const idx=parseInt(el.dataset.qidx);
     if (val === 'filler') {
-      mutate(() => { queue.splice(idx,1); });
+      mutate(() => { queue.splice(idx,1); }, 'removed', 'Filler');
     } else {
-      mutate(() => { queue.splice(idx,1); pool.add(val); });
+      mutate(() => { queue.splice(idx,1); pool.add(val); }, 'removed', val);
     }
   }
 }
@@ -513,7 +549,7 @@ function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=
 
 function doDrop(target) {
   const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
-  const isFiller = (val === 'filler');
+  const isDummy = (val === 'filler');
 
   // Use previewIdx as the canonical insertion point when set —
   // this covers the full gap zone (original tile position + shifted position)
@@ -529,16 +565,19 @@ function doDrop(target) {
 
     if (ins !== null) {
       // Dropped in the gap preview zone
-      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(ins,0,v); });
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(ins,0,v); },
+             'added', isF?'Filler':val);
       return;
     }
     if (role==='queue'||role==='empty') {
       const idx = isNaN(ti)||ti>queue.length ? queue.length : ti;
-      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(idx,0,v); });
+      mutate(()=>{ if(!isF) pool.delete(val); queue.splice(idx,0,v); },
+             'added', isF?'Filler':val);
       return;
     }
     if (target?.closest('#queue-wrapper')) {
-      mutate(()=>{ if(!isF) pool.delete(val); queue.push(v); });
+      mutate(()=>{ if(!isF) pool.delete(val); queue.push(v); },
+             'added', isF?'Filler':val);
       return;
     }
     // Dropped back in pool area — do nothing (tap handles removal)
@@ -547,8 +586,8 @@ function doDrop(target) {
 
   // ── Queue tile → zero/load slot ──
   if (src==='queue' && role==='zero') {
-    if (isFiller) mutate(()=>{ queue.splice(si,1); });
-    else         mutate(()=>{ queue.splice(si,1); pool.add(val); });
+    if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'loaded', 'Filler');
+    else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'loaded', val);
     return;
   }
 
@@ -557,13 +596,13 @@ function doDrop(target) {
     // Use previewIdx if set, otherwise fall back to target tile index
     const dest = ins !== null ? ins : (!isNaN(ti) ? ti : null);
     if (dest !== null && dest !== si) {
-      mutate(()=>{ queue.splice(si,1); queue.splice(dest>si?dest-1:dest,0,val); });
+      mutate(()=>{ queue.splice(si,1); queue.splice(dest>si?dest-1:dest,0,val); }, 'moved', val);
       return;
     }
     // Dropped back on pool → remove
     if (role==='pool'||role==='filler-src') {
-      if (isFiller) mutate(()=>{ queue.splice(si,1); });
-      else         mutate(()=>{ queue.splice(si,1); pool.add(val); });
+      if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'removed', 'Filler');
+      else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'removed', val);
       return;
     }
   }
@@ -622,90 +661,6 @@ function applyPreview() {
     }
   });
 }
-
-function handleTap(el) {
-  if (!el) return;
-  const role=el.dataset.role, rawVal=el.dataset.val;
-  const val = rawVal === 'filler' ? 'filler' : parseInt(rawVal);
-  if (role==='filler-src') {
-    mutate(() => { queue.push('filler'); });
-  } else if (role==='pool') {
-    mutate(() => { pool.delete(val); queue.push(val); });
-  } else if (role==='queue') {
-    const idx=parseInt(el.dataset.qidx);
-    if (val === 'filler') { mutate(() => { queue.splice(idx,1); }); }
-    else { mutate(() => { queue.splice(idx,1); pool.add(val); }); }
-  }
-}
-
-function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=(y-dnd.oy)+'px'; }
-
-function doDrop(target) {
-  if (!target) return;
-  const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
-  const role=target.dataset.role, ti=parseInt(target.dataset.qidx);
-  const isFiller = (val === 'filler');
-
-  if (src==='filler-src') {
-    if (role==='queue'||role==='overflow') { mutate(()=>{ queue.splice(previewIdx>=0?previewIdx:ti,0,'filler'); }); return; }
-    if (role==='empty') { mutate(()=>{ queue.splice(previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti),0,'filler'); }); return; }
-    if (target.closest('#queue-wrapper')) { mutate(()=>{ queue.push('filler'); }); return; }
-  }
-  if (src==='pool') {
-    if (role==='queue'||role==='empty') { const ins=previewIdx>=0?previewIdx:(isNaN(ti)||ti>queue.length?queue.length:ti); mutate(()=>{ pool.delete(val); queue.splice(ins,0,val); }); return; }
-    if (target.closest('#queue-wrapper')) { mutate(()=>{ pool.delete(val); queue.push(val); }); return; }
-  }
-  if (src==='queue'&&role==='zero') {
-    if (isFiller) { mutate(()=>{ queue.splice(si,1); }); }
-    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
-    return;
-  }
-  if (src==='queue'&&role==='queue'&&ti!==si) { mutate(()=>{ queue.splice(si,1); queue.splice(ti>si?ti-1:ti,0,val); }); return; }
-  if (src==='queue'&&(role==='overflow'||role==='empty')&&!isNaN(ti)) { mutate(()=>{ queue.splice(si,1); queue.splice(Math.min(ti,queue.length),0,val); }); return; }
-  if (src==='queue'&&(role==='pool'||role==='filler-src')) {
-    if (isFiller) { mutate(()=>{ queue.splice(si,1); }); }
-    else { mutate(()=>{ queue.splice(si,1); pool.add(val); }); }
-    return;
-  }
-}
-
-function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.classList.remove('drop-ok')); }
-
-/* ── INSERT PREVIEW ── */
-function updatePreview(cx, cy) {
-  if (!['queue','pool','filler-src'].includes(dnd.source)) { clearPreview(); return; }
-  ghostEl.style.display = 'none';
-  const offsets = [[0,0],[0,-22],[0,22],[-22,0],[22,0]];
-  let el = null;
-  for (const [dx,dy] of offsets) {
-    const hit = document.elementFromPoint(cx+dx, cy+dy)?.closest(
-      '.tile[data-role="queue"],.tile[data-role="empty"],.tile[data-role="overflow"]'
-    );
-    if (hit && hit !== dnd.srcEl) { el = hit; break; }
-  }
-  ghostEl.style.display = 'flex';
-  if (el && el.dataset.role === 'zero') { clearPreview(); return; }
-  if (el) {
-    const ti = parseInt(el.dataset.qidx);
-    if (!isNaN(ti) && ti !== previewIdx) { previewIdx = ti; applyPreview(); }
-  }
-}
-
-function clearPreview() {
-  if (previewIdx === -1) return;
-  previewIdx = -1; applyPreview();
-}
-
-function applyPreview() {
-  qGrid.querySelectorAll('.tile[data-qidx]').forEach(t => {
-    const qi = parseInt(t.dataset.qidx);
-    const isSrc = (dnd.source === 'queue' && qi === dnd.srcIdx);
-    t.style.marginLeft = (previewIdx >= 0 && qi === previewIdx && !isSrc)
-      ? 'calc(var(--tile) + var(--gap) * 2)' : '';
-  });
-}
-
-render();
 </script>
 </body>
 </html>
