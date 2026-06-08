@@ -380,8 +380,8 @@ function renderQueue() {
             // The next available slot — show as + button
             tile.classList.add('q-add');
             tile.textContent = '+';
-            tile.addEventListener('click', () => openDialpad());
-            tile.addEventListener('touchend', e => { e.preventDefault(); openDialpad(); }, { passive:false });
+            tile.addEventListener('click', () => openDialpad(tile));
+            tile.addEventListener('touchend', e => { e.preventDefault(); openDialpad(tile); }, { passive:false });
           } else {
             tile.classList.add('q-empty');
             if (qIdx > queue.length) tile.classList.add('hidden-slot');
@@ -588,16 +588,35 @@ function finishDrag(el) {
 
 /* ── DIALPAD INPUT ── */
 const dialpadInput = document.getElementById('dialpad-input');
+let addTileEl = null; // reference to the current + tile
 
-function openDialpad() {
+function openDialpad(tileEl) {
+  addTileEl = tileEl;
+  tileEl.textContent = '_';
+  tileEl.style.fontSize = 'calc(var(--tile) * 0.35)';
   dialpadInput.value = '';
   dialpadInput.style.pointerEvents = 'auto';
   dialpadInput.focus();
 }
 
+dialpadInput.addEventListener('input', () => {
+  if (!addTileEl) return;
+  const raw = dialpadInput.value.trim();
+  addTileEl.textContent = raw || '_';
+  addTileEl.style.fontSize = raw.length > 2
+    ? 'calc(var(--tile) * 0.28)'
+    : 'calc(var(--tile) * 0.35)';
+});
+
 dialpadInput.addEventListener('blur', () => {
   dialpadInput.style.pointerEvents = 'none';
   const raw = dialpadInput.value.trim();
+  // Reset tile appearance
+  if (addTileEl) {
+    addTileEl.textContent = '+';
+    addTileEl.style.fontSize = '';
+    addTileEl = null;
+  }
   if (!raw) return;
   const num = parseInt(raw);
   if (isNaN(num) || num < 1 || num > 140) {
