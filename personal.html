@@ -251,7 +251,7 @@ function render() { renderQueue(); renderPool(); }
 
 function renderQueue() {
   const qLen = queue.length;
-  const slotsPer = COLS - 1; const rows = qLen < slotsPer ? 1 : 1 + Math.ceil((qLen - slotsPer) / COLS);
+  const slotsPer = COLS - 1; const rows = (qLen + 1) <= slotsPer ? 1 : 1 + Math.ceil((qLen + 1 - slotsPer) / COLS);
   const prevRowCount = qGrid.querySelectorAll('.qrow').length;
   qGrid.innerHTML = '';
 
