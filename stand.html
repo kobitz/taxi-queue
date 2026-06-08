@@ -98,6 +98,15 @@
   .q-overflow { background: var(--overflow); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
   .q-empty    { background: var(--empty); border: 1.5px dashed rgba(255,255,255,.13); cursor: default !important; }
   .q-empty.hidden-slot { visibility: hidden; pointer-events: none; }
+  .q-add { background: var(--empty); border: 1.5px dashed rgba(128,216,255,.35);
+    color: rgba(128,216,255,.5); font-size: calc(var(--tile)*0.45);
+    cursor: pointer; line-height: 1; }
+  .q-add:hover { background: rgba(128,216,255,.08); border-color: rgba(128,216,255,.6); color: rgba(128,216,255,.8); }
+  /* Hidden numeric input used to trigger dialpad */
+  #dialpad-input {
+    position: fixed; opacity: 0; pointer-events: none;
+    top: 50%; left: 50%; width: 1px; height: 1px;
+  }
 
   /* POOL */
   #pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
@@ -153,6 +162,7 @@
 </section>
 
 <div id="ghost"></div>
+<input id="dialpad-input" type="tel" inputmode="numeric" pattern="[0-9]*">
 
 <script type="module">
 import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -176,28 +186,27 @@ function setSync(state) {
 
 
 /* ── DEVICE NAME ── */
-function getDeviceType() {
+function getOSType() {
   const ua = navigator.userAgent;
-  if (/iPhone/.test(ua))       return 'iPhone';
-  if (/iPad/.test(ua))         return 'iPad';
-  if (/Android/.test(ua))      return 'Android';
-  if (/Windows/.test(ua))      return 'Windows';
-  if (/Macintosh/.test(ua))    return 'Mac';
-  if (/Linux/.test(ua))        return 'Linux';
-  return 'Unknown Device';
+  if (/iPhone/.test(ua))    return 'iPhone';
+  if (/iPad/.test(ua))      return 'iPad';
+  if (/Android/.test(ua))   return 'Android';
+  if (/Windows/.test(ua))   return 'Windows';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Linux/.test(ua))     return 'Linux';
+  return 'Unknown';
 }
 
 let userName = localStorage.getItem('taxi-device-name') || '';
 
 function ensureDeviceName() {
   if (userName) return;
-  const name = prompt('Enter your name (shown in history):', '') || 'Unknown';
-  userName = name;
+  userName = prompt('Enter your name (shown in history):', '') || 'Unknown';
   localStorage.setItem('taxi-device-name', userName);
 }
 
 function getFullDeviceLabel() {
-  return `${userName} — ${getDeviceType()}`;
+  return `${userName} — ${getOSType()}`;
 }
 
 /* ── LOG CHANGE ── */
@@ -346,7 +355,7 @@ function renderQueue() {
         tile.style.textAlign = 'center';
         tile.style.lineHeight = '1.2';
         tile.style.padding = '4px';
-        tile.textContent = 'Loaded';
+        tile.textContent = 'Loaded or Dropped';
         tile.dataset.role = 'zero';
       } else {
         const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
@@ -365,10 +374,18 @@ function renderQueue() {
           tile.dataset.val  = val;
           attachDrag(tile, 'queue', qIdx, val);
         } else {
-          tile.classList.add('q-empty');
           tile.dataset.role = 'empty';
           tile.dataset.qidx = qIdx;
-          if (qIdx > queue.length) tile.classList.add('hidden-slot');
+          if (qIdx === queue.length) {
+            // The next available slot — show as + button
+            tile.classList.add('q-add');
+            tile.textContent = '+';
+            tile.addEventListener('click', () => openDialpad());
+            tile.addEventListener('touchend', e => { e.preventDefault(); openDialpad(); }, { passive:false });
+          } else {
+            tile.classList.add('q-empty');
+            if (qIdx > queue.length) tile.classList.add('hidden-slot');
+          }
         }
       }
       rowEl.appendChild(tile);
@@ -568,6 +585,31 @@ function finishDrag(el) {
   el?.classList.remove('dragging', 'drag-ready');
 }
 
+
+/* ── DIALPAD INPUT ── */
+const dialpadInput = document.getElementById('dialpad-input');
+
+function openDialpad() {
+  dialpadInput.value = '';
+  dialpadInput.style.pointerEvents = 'auto';
+  dialpadInput.focus();
+}
+
+dialpadInput.addEventListener('blur', () => {
+  dialpadInput.style.pointerEvents = 'none';
+  const raw = dialpadInput.value.trim();
+  if (!raw) return;
+  const num = parseInt(raw);
+  if (isNaN(num) || num < 1 || num > 140) {
+    alert(`"${raw}" is not a valid taxi number (1–140).`);
+    return;
+  }
+  if (!pool.has(num)) {
+    alert(`Taxi ${num} is already in the queue.`);
+    return;
+  }
+  mutate(() => { pool.delete(num); queue.push(num); }, 'added', num);
+});
 
 function handleTap(el) {
   if (!el) return;
