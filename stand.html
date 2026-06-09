@@ -218,8 +218,7 @@ const request1011Ref  = ref(db, 'request1011');
 
 const syncEl = document.getElementById('sync-status');
 function setSync(state) {
-  syncEl.className = 'ok saving error'.split(' ').reduce((el,c)=>(el.classList.remove(c),el), syncEl) || syncEl;
-  syncEl.classList.add(state);
+  syncEl.className = state;
   syncEl.textContent = state === 'ok' ? 'LIVE' : state === 'saving' ? 'SAVING…' : 'OFFLINE';
 }
 
@@ -314,7 +313,6 @@ function rebuildPool(q) {
 }
 
 /* ── LISTEN for remote changes ── */
-let ignoreNext = false; // skip re-render when we ourselves just saved
 onValue(queueRef, snapshot => {
   const data = snapshot.val();
   queue = Array.isArray(data) ? data : (data ? Object.values(data) : []);
@@ -947,7 +945,7 @@ function doDrop(target) {
       return;
     }
     // Dropped back on pool → remove
-    if (role==='pool'||role==='dummy-src') {
+    if (role==='pool'||role==='dummy-src'||role==='dummy-front-src') {
       if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'removed', 'Filler');
       else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'removed', val);
       return;
@@ -961,7 +959,7 @@ function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.clas
 let previewIdx = -1; // queue index where gap is shown (-1 = none)
 
 function updatePreview(cx, cy) {
-  if (!['queue','pool','dummy-src'].includes(dnd.source)) { clearPreview(); return; }
+  if (!['queue','pool','dummy-src','dummy-front-src'].includes(dnd.source)) { clearPreview(); return; }
 
   // Sample multiple points around the cursor to pierce through the ghost/gap
   ghostEl.style.display = 'none';

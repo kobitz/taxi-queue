@@ -181,8 +181,7 @@
 const STORAGE_KEY = 'taxi-queue-personal';
 const syncEl = document.getElementById('sync-status');
 function setSync(state) {
-  syncEl.className = 'ok saving error'.split(' ').reduce((el,c)=>(el.classList.remove(c),el), syncEl) || syncEl;
-  syncEl.classList.add(state);
+  syncEl.className = state;
   syncEl.textContent = state === 'ok' ? 'SAVED' : state === 'saving' ? 'SAVING…' : 'ERROR';
 }
 
@@ -245,8 +244,6 @@ function ensureMyNumber() {
   localStorage.setItem('taxi-my-number', num);
 }
 
-ensureMyNumber();
-
 /* ── STATE ── */
 let MAX_NUM = parseInt(localStorage.getItem('taxi-max-num') || '140');
 let queue = [];
@@ -261,6 +258,8 @@ function rebuildPool(q) {
   for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
   for (const v of q) if (typeof v === 'number') pool.delete(v);
 }
+
+ensureMyNumber();
 
 /* ── LOAD FROM LOCALSTORAGE ── */
 try {
@@ -449,7 +448,7 @@ function renderPool() {
   dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
   dummy.dataset.role = 'filler-src';
   dummy.dataset.val  = 'filler';
-  attachDrag(dummy, 'filler-src', null, 'dummy');
+  attachDrag(dummy, 'filler-src', null, 'filler');
   pGrid.appendChild(dummy);
 
   [...pool].sort((a,b)=>a-b).forEach(num => {
@@ -851,7 +850,7 @@ function doDrop(target) {
       return;
     }
     // Dropped back on pool → remove
-    if (role==='pool'||role==='filler-src') {
+    if (role==='pool'||role==='filler-src'||role==='filler-front-src') {
       if (isDummy) mutate(()=>{ queue.splice(si,1); }, 'removed', 'Filler');
       else         mutate(()=>{ queue.splice(si,1); pool.add(val); }, 'removed', val);
       return;
@@ -865,7 +864,7 @@ function clearDropHL() { document.querySelectorAll('.drop-ok').forEach(e=>e.clas
 let previewIdx = -1; // queue index where gap is shown (-1 = none)
 
 function updatePreview(cx, cy) {
-  if (!['queue','pool','filler-src'].includes(dnd.source)) { clearPreview(); return; }
+  if (!['queue','pool','filler-src','filler-front-src'].includes(dnd.source)) { clearPreview(); return; }
 
   // Sample multiple points around the cursor to pierce through the ghost/gap
   ghostEl.style.display = 'none';
