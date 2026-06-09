@@ -23,7 +23,7 @@ Hosted at: `https://kobitz.github.io/taxi-queue`
 
 The queue is displayed as a grid of numbered tiles. Each row holds up to 10 positions (or 5 in Bigger Tiles mode).
 
-- **Grey "Loaded" tile** — the first slot. Tap once to prime it (yellow border appears and the first queue tile highlights in yellow), then tap again to remove that taxi as loaded. You can also drag any queue tile directly onto it.
+- **Grey "Loading" tile** — the first slot. Tap once to prime it (yellow border appears and the first queue tile highlights in yellow), then tap again to remove that taxi as loaded. You can also drag any queue tile directly onto it.
 - **Blue tiles (positions 1–4)** — Stand
 - **Purple tiles (positions 5–8)** — Holding
 - **Light blue tiles (positions 9+, and all overflow rows)** — general queue
@@ -49,8 +49,8 @@ Taxis not currently in the queue live here, always sorted numerically (1–140).
 ### Removing from the Queue
 
 - **Tap twice** any queue tile to remove it — first tap highlights it, second tap removes it and returns it to Not in Queue
-- **Tap "Loaded"** once to prime it (first queue tile highlights yellow), then tap again to remove that taxi and log it as Loaded
-- **Drag** a queue tile onto the "Loaded" tile to remove it directly (no two-tap required)
+- **Tap "Loading"** once to prime it (first queue tile highlights yellow), then tap again to remove that taxi and log it as Loaded
+- **Drag** a queue tile onto the "Loading" tile to remove it directly (no two-tap required)
 - **Drag** a queue tile back down to the Not in Queue area to remove it
 
 ### Reordering

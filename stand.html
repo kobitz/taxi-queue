@@ -359,7 +359,7 @@ function renderQueue() {
         tile.style.fontSize = 'calc(var(--tile) * 0.20)';
         tile.style.textAlign = 'center';
         tile.style.padding = '4px';
-        tile.textContent = 'Loaded';
+        tile.textContent = 'Loading';
         tile.dataset.role = 'zero';
         if (loadedPrimed && queue.length > 0) tile.classList.add('primed');
         attachDrag(tile, 'zero', null, null);
