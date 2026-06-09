@@ -432,17 +432,7 @@ function renderQueue() {
 function renderPool() {
   pGrid.innerHTML = '';
   pGrid.style.gridTemplateColumns = `repeat(${COLS}, var(--tile))`;
-  // Dummy tile — always first, never leaves the pool
-  const dummy = document.createElement('div');
-  dummy.className = 'tile';
-  dummy.textContent = 'Filler';
-  dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
-  dummy.dataset.role = 'filler-src';
-  dummy.dataset.val  = 'filler';
-  attachDrag(dummy, 'filler-src', null, 'dummy');
-  pGrid.appendChild(dummy);
-
-  // Filler-front tile — always second, inserts at front of queue
+  // Filler-front tile — always first, inserts at front of queue
   const dummyFront = document.createElement('div');
   dummyFront.className = 'tile';
   dummyFront.textContent = 'Filler In-Front';
@@ -451,6 +441,16 @@ function renderPool() {
   dummyFront.dataset.val  = 'filler';
   attachDrag(dummyFront, 'filler-front-src', null, 'filler');
   pGrid.appendChild(dummyFront);
+
+  // Dummy tile — always second, inserts at end of queue
+  const dummy = document.createElement('div');
+  dummy.className = 'tile';
+  dummy.textContent = 'Filler';
+  dummy.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.16);';
+  dummy.dataset.role = 'filler-src';
+  dummy.dataset.val  = 'filler';
+  attachDrag(dummy, 'filler-src', null, 'dummy');
+  pGrid.appendChild(dummy);
 
   [...pool].sort((a,b)=>a-b).forEach(num => {
     const tile = document.createElement('div');
