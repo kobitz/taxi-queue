@@ -52,7 +52,7 @@
 
   .entry {
     display: grid;
-    grid-template-columns: 52px 1fr auto;
+    grid-template-columns: auto 1fr auto;
     gap: 8px; align-items: center;
     background: rgba(255,255,255,.05);
     border-radius: 8px; padding: 8px 10px;
@@ -110,7 +110,7 @@
 <div id="filters">
   <button class="filter-btn active" data-filter="all">All</button>
   <button class="filter-btn" data-filter="added">Added</button>
-  <button class="filter-btn" data-filter="removed">Removed</button>
+  <button class="filter-btn" data-filter="removed">Dropped</button>
   <button class="filter-btn" data-filter="loaded">Loaded</button>
   <button class="filter-btn" data-filter="moved">Moved</button>
   <button class="filter-btn" data-filter="req1011">10-11</button>
@@ -181,7 +181,7 @@ function renderLog() {
     const el = document.createElement('div');
     el.className = `entry ${entry.action}`;
 
-    const actionLabels = { added: 'Added', removed: 'Removed', loaded: 'Loaded', moved: 'Moved', req1011: '10-11' };
+    const actionLabels = { added: 'Added', removed: 'Dropped', loaded: 'Loaded', moved: 'Moved', req1011: '10-11' };
     const timeStr = formatTime(entry.ts);
 
     el.innerHTML = `
