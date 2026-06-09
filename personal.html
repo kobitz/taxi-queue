@@ -605,10 +605,7 @@ document.addEventListener('pointerdown', e => {
   if (e.pointerType === 'touch') return;
   if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
 });
-// Clear selection on touch outside a queue tile (mobile)
-document.addEventListener('touchend', e => {
-  if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
-}, { passive:true });
+// Clear selection on touch outside queue tile handled in handleTap
 
 function handleTap(el) {
   if (!el) return;
