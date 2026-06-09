@@ -97,7 +97,7 @@
   .tile.my-tile.selected { box-shadow: 0 0 0 2px var(--highlight) !important; filter: brightness(1.35); }
 
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
-  .tile .sup { position:absolute; top:4px; left:0; right:0; text-align:center; font-size:calc(var(--tile)*0.14); font-weight:600; opacity:.75; pointer-events:none; }
+  .tile.selected::before { content:'Drop?'; position:absolute; top:4px; left:0; right:0; text-align:center; font-size:calc(var(--tile)*0.18); font-weight:600; opacity:.7; pointer-events:none; }
 
   .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: pointer; }
   .q-zero.primed { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
@@ -360,12 +360,7 @@ function renderQueue() {
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
           tile.dataset.val  = val;
-          if (qIdx === selectedQIdx) {
-            tile.classList.add('selected');
-            const sup = document.createElement('span');
-            sup.className = 'sup'; sup.textContent = 'Drop?';
-            tile.appendChild(sup);
-          }
+          if (qIdx === selectedQIdx) tile.classList.add('selected');
           if (loadedPrimed && qIdx === 0) tile.classList.add('load-target');
           attachDrag(tile, 'queue', qIdx, val);
         } else {
@@ -609,6 +604,8 @@ dialpadInput.addEventListener('input', () => {
     ? 'calc(var(--tile) * 0.28)'
     : 'calc(var(--tile) * 0.35)';
 });
+
+dialpadInput.addEventListener('keydown', e => { if (e.key === 'Enter') dialpadInput.blur(); });
 
 dialpadInput.addEventListener('blur', () => {
   dialpadInput.style.pointerEvents = 'none';
