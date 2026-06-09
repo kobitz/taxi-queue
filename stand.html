@@ -96,7 +96,9 @@
   .tile.selected::before { content:'Drop?'; position:absolute; top:4px; left:0; right:0; text-align:center; font-size:calc(var(--tile)*0.18); font-weight:600; opacity:.7; pointer-events:none; }
 
   .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: pointer; }
-  .q-zero.primed { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
+  .q-zero.primed        { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
+  .q-zero.clear-armed   { box-shadow: 0 0 0 2px #ff5555; color: #ffd600; }
+  .q-zero.clear-confirm { box-shadow: 0 0 0 2px #ff5555; color: #ff5555; }
   .tile.load-target { box-shadow: 0 0 0 2px #ffd600 !important; filter: brightness(1.2); }
   .q-stand    { background: var(--stand);    box-shadow: 0 4px 14px rgba(21,101,192,.45); }
   .q-hold     { background: var(--holding);  box-shadow: 0 4px 14px rgba(106,27,154,.45); }
@@ -271,6 +273,7 @@ let queue = [];
 let pool  = new Set();
 for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
 let loadedPrimed = false;
+let clearState = 0; // 0=normal, 1=clear-armed, 2=confirm
 
 /* Rebuild pool from queue */
 function rebuildPool(q) {
@@ -369,13 +372,53 @@ function renderQueue() {
 
       if (row === 0 && col === 0) {
         tile.classList.add('q-zero');
-        tile.style.fontSize = 'calc(var(--tile) * 0.20)';
         tile.style.textAlign = 'center';
+        tile.style.lineHeight = '1.2';
         tile.style.padding = '4px';
-        tile.textContent = (loadedPrimed && queue.length > 0) ? 'Loaded' : 'Loading';
+        if (clearState === 1) {
+          tile.textContent = 'Clear All';
+          tile.style.fontSize = 'calc(var(--tile) * 0.18)';
+          tile.classList.add('clear-armed');
+        } else if (clearState === 2) {
+          tile.textContent = 'Are you sure?';
+          tile.style.fontSize = 'calc(var(--tile) * 0.15)';
+          tile.classList.add('clear-confirm');
+        } else if (loadedPrimed && queue.length > 0) {
+          tile.textContent = 'Loaded';
+          tile.style.fontSize = 'calc(var(--tile) * 0.20)';
+          tile.classList.add('primed');
+        } else {
+          tile.textContent = 'Loading';
+          tile.style.fontSize = 'calc(var(--tile) * 0.20)';
+        }
         tile.dataset.role = 'zero';
-        if (loadedPrimed && queue.length > 0) tile.classList.add('primed');
-        attachDrag(tile, 'zero', null, null);
+
+        let zeroHold = null;
+        const fireHold = () => { zeroHold = null; clearSelected(); clearState = 1; render(); };
+        tile.addEventListener('touchstart', () => {
+          lastTouchTime = Date.now();
+          zeroHold = setTimeout(fireHold, HOLD_MS);
+        }, { passive: true });
+        tile.addEventListener('touchmove', () => {
+          if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; }
+        }, { passive: true });
+        tile.addEventListener('touchend', e => {
+          e.preventDefault();
+          if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; handleTap(tile); }
+        });
+        tile.addEventListener('mousedown', e => {
+          if (e.button !== 0 || Date.now() - lastTouchTime < 500) return;
+          e.preventDefault();
+          zeroHold = setTimeout(fireHold, HOLD_MS);
+          const onMove = () => { if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; } };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; handleTap(tile); }
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
       } else {
         const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
         if (qIdx < queue.length) {
@@ -704,10 +747,11 @@ let selectedQIdx = -1; // track by queue index, not element ref (DOM rebuilds on
 function clearSelected() {
   selectedQIdx = -1;
   loadedPrimed = false;
+  clearState = 0;
   qGrid.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
   qGrid.querySelectorAll('.tile.load-target').forEach(t => t.classList.remove('load-target'));
   const zeroTile = document.querySelector('.tile[data-role="zero"]');
-  if (zeroTile) { zeroTile.classList.remove('primed'); zeroTile.textContent = 'Loading'; }
+  if (zeroTile) { zeroTile.classList.remove('primed', 'clear-armed', 'clear-confirm'); zeroTile.textContent = 'Loading'; }
 }
 
 // Clear selection when tapping outside a queue or loaded tile
@@ -727,7 +771,16 @@ function handleTap(el) {
   const role=el.dataset.role, rawVal=el.dataset.val;
   const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
   if (role==='zero') {
-    if (loadedPrimed) {
+    if (clearState === 2) {
+      clearSelected();
+      queue.length = 0;
+      rebuildPool(queue);
+      saveToFirebase();
+      render();
+    } else if (clearState === 1) {
+      clearState = 2;
+      render();
+    } else if (loadedPrimed) {
       clearSelected();
       if (queue.length > 0) {
         const v = queue[0];
