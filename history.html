@@ -60,10 +60,11 @@
   }
   @keyframes fadeIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }
 
-  .entry.added   { border-left: 3px solid #1565c0; }
-  .entry.removed { border-left: 3px solid rgba(255,255,255,.2); }
-  .entry.loaded  { border-left: 3px solid #ffd600; }
-  .entry.moved   { border-left: 3px solid #6a1b9a; }
+  .entry.added    { border-left: 3px solid #1565c0; }
+  .entry.removed  { border-left: 3px solid rgba(255,255,255,.2); }
+  .entry.loaded   { border-left: 3px solid #ffd600; }
+  .entry.moved    { border-left: 3px solid #6a1b9a; }
+  .entry.req1011  { border-left: 3px solid #ff5555; }
 
   .entry-action {
     font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
@@ -73,6 +74,7 @@
   .removed .entry-action { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
   .loaded  .entry-action { background: rgba(255,214,0,.25);  color: #ffd600; }
   .moved   .entry-action { background: rgba(106,27,154,.4);  color: #ce93d8; }
+  .req1011 .entry-action { background: rgba(255,85,85,.25);  color: #ff8080; }
 
   .entry-main { display: flex; flex-direction: column; gap: 2px; }
   .entry-value { font-size: 15px; font-weight: 700; }
@@ -111,6 +113,7 @@
   <button class="filter-btn" data-filter="removed">Removed</button>
   <button class="filter-btn" data-filter="loaded">Loaded</button>
   <button class="filter-btn" data-filter="moved">Moved</button>
+  <button class="filter-btn" data-filter="req1011">10-11</button>
   <input id="search" type="search" placeholder="Search taxi # or device…">
 </div>
 
@@ -178,7 +181,7 @@ function renderLog() {
     const el = document.createElement('div');
     el.className = `entry ${entry.action}`;
 
-    const actionLabels = { added: 'Added', removed: 'Removed', loaded: 'Loaded', moved: 'Moved' };
+    const actionLabels = { added: 'Added', removed: 'Removed', loaded: 'Loaded', moved: 'Moved', req1011: '10-11' };
     const timeStr = formatTime(entry.ts);
 
     el.innerHTML = `

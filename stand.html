@@ -142,6 +142,24 @@
   }
   #zoom-btn:hover { background: rgba(128,216,255,.28); }
   #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
+
+  /* 10-11 modal */
+  #req1011-modal {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.65); align-items: center; justify-content: center;
+  }
+  #req1011-modal.visible { display: flex; }
+  .req1011-card {
+    background: #1e1248; border: 1.5px solid rgba(255,214,0,.45);
+    border-radius: 16px; padding: 28px 24px; max-width: 300px; width: 90%;
+    text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.6);
+  }
+  .req1011-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #ffd600; margin-bottom: 10px; }
+  .req1011-msg   { font-size: 17px; font-weight: 700; margin-bottom: 22px; line-height: 1.3; }
+  .req1011-btns  { display: flex; gap: 10px; justify-content: center; }
+  .req1011-btn   { padding: 11px 28px; border-radius: 10px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; }
+  .req1011-ok    { background: #ffd600; color: #1e1248; }
+  .req1011-undo  { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); border: 1.5px solid rgba(255,255,255,.2); }
 </style>
 </head>
 <body>
@@ -169,6 +187,17 @@
   <div id="pool-grid"></div>
 </section>
 
+<div id="req1011-modal">
+  <div class="req1011-card">
+    <div class="req1011-title">10-11 Request</div>
+    <div class="req1011-msg" id="req1011-msg"></div>
+    <div class="req1011-btns">
+      <button class="req1011-btn req1011-ok"   id="req1011-ok">OK</button>
+      <button class="req1011-btn req1011-undo" id="req1011-undo">Undo</button>
+    </div>
+  </div>
+</div>
+
 <div id="ghost"></div>
 <input id="dialpad-input" type="tel" inputmode="numeric" pattern="[0-9]*">
 
@@ -184,7 +213,8 @@ const app = initializeApp({
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
 const historyRef = ref(db, 'history');
-const maxRef = ref(db, 'maxNum');
+const maxRef          = ref(db, 'maxNum');
+const request1011Ref  = ref(db, 'request1011');
 
 const syncEl = document.getElementById('sync-status');
 function setSync(state) {
@@ -300,6 +330,12 @@ onValue(maxRef, snapshot => {
     rebuildPool(queue);
     render();
   }
+});
+
+onValue(request1011Ref, snapshot => {
+  const req = snapshot.val();
+  if (!req || !req.number) return;
+  showReq1011(req.number);
 });
 
 /* ── DOM ── */
@@ -500,6 +536,30 @@ function renderPool() {
   maxTile.addEventListener('click', () => openMaxDialpad(maxTile));
   maxTile.addEventListener('touchend', e => { e.preventDefault(); openMaxDialpad(maxTile); }, { passive: false });
   pGrid.appendChild(maxTile);
+}
+
+/* ── 10-11 REQUEST MODAL ── */
+function showReq1011(num) {
+  const modal  = document.getElementById('req1011-modal');
+  const msgEl  = document.getElementById('req1011-msg');
+  const okBtn  = document.getElementById('req1011-ok');
+  const undoBtn = document.getElementById('req1011-undo');
+  msgEl.textContent = `#${num} has requested a 10-11`;
+  modal.classList.add('visible');
+
+  const cleanup = () => {
+    modal.classList.remove('visible');
+    set(request1011Ref, null);
+    okBtn.onclick = null;
+    undoBtn.onclick = null;
+  };
+
+  okBtn.onclick = () => {
+    const idx = queue.indexOf(num);
+    if (idx !== -1) mutate(() => { queue.splice(idx, 1); pool.add(num); }, 'req1011', num);
+    cleanup();
+  };
+  undoBtn.onclick = cleanup;
 }
 
 /* ── STATE MUTATORS (all call saveToFirebase) ── */

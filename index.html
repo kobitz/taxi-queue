@@ -91,6 +91,8 @@
   .q-empty    { background: var(--empty); border: 1.5px dashed rgba(255,255,255,.13); }
   .tile.landmark { filter: brightness(1.5) saturate(1.4); background: rgba(128,216,255,.20); }
   .q-empty.hidden-slot { visibility: hidden; }
+  .q-zero.req-armed   { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
+  .q-zero.req-confirm { box-shadow: 0 0 0 2px #ff5555; color: #ff5555; }
 
   #zoom-btn {
     position: fixed; top: 6px; right: 6px;
@@ -127,7 +129,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
@@ -135,7 +137,8 @@ const app = initializeApp({
 });
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
-const maxRef   = ref(db, 'maxNum');
+const maxRef          = ref(db, 'maxNum');
+const request1011Ref  = ref(db, 'request1011');
 
 const syncEl = document.getElementById('sync-status');
 
@@ -172,6 +175,10 @@ let myNumber = parseInt(localStorage.getItem('taxi-my-number') || '0') || null;
 /* ── STATE ── */
 let MAX_NUM = 140;
 let queue = [];
+let reqState = 0;
+let reqHold  = null;
+const HOLD_MS = 350;
+let lastTouchTime = 0;
 
 function ensureMyNumber() {
   if (myNumber) return;
@@ -278,11 +285,53 @@ function renderQueue() {
 
       if (row === 0 && col === 0) {
         tile.classList.add('q-zero');
-        tile.style.fontSize = 'calc(var(--tile) * 0.13)';
+        tile.dataset.role = 'zero1011';
         tile.style.textAlign = 'center';
         tile.style.lineHeight = '1.2';
         tile.style.padding = '4px';
-        tile.textContent = 'Loaded or Dropped';
+        if (reqState === 1) {
+          tile.innerHTML = 'Request<br>10-11?';
+          tile.style.fontSize = 'calc(var(--tile) * 0.14)';
+          tile.classList.add('req-armed');
+        } else if (reqState === 2) {
+          tile.innerHTML = 'Are you<br>sure?';
+          tile.style.fontSize = 'calc(var(--tile) * 0.14)';
+          tile.classList.add('req-confirm');
+        } else {
+          tile.textContent = '10-11';
+          tile.style.fontSize = 'calc(var(--tile) * 0.24)';
+        }
+        const fireHold = () => {
+          reqHold = null;
+          if (!myNumber) { alert('Set your taxi number first.'); return; }
+          if (!queue.includes(myNumber)) { alert('Your number is not currently in the queue.'); return; }
+          reqState = 1;
+          render();
+        };
+        tile.addEventListener('touchstart', () => {
+          lastTouchTime = Date.now();
+          reqHold = setTimeout(fireHold, HOLD_MS);
+        }, { passive: true });
+        tile.addEventListener('touchmove', () => {
+          if (reqHold) { clearTimeout(reqHold); reqHold = null; }
+        }, { passive: true });
+        tile.addEventListener('touchend', e => {
+          e.preventDefault();
+          if (reqHold) { clearTimeout(reqHold); reqHold = null; handleReqTap(); }
+        });
+        tile.addEventListener('mousedown', e => {
+          if (e.button !== 0 || Date.now() - lastTouchTime < 500) return;
+          e.preventDefault();
+          reqHold = setTimeout(fireHold, HOLD_MS);
+          const onMove = () => { if (reqHold) { clearTimeout(reqHold); reqHold = null; } };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (reqHold) { clearTimeout(reqHold); reqHold = null; handleReqTap(); }
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
       } else {
         const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
         if (qIdx < queue.length) {
@@ -308,6 +357,26 @@ function renderQueue() {
   }
 }
 
+
+/* ── 10-11 REQUEST ── */
+function handleReqTap() {
+  if (reqState === 0) return;
+  if (reqState === 1) { reqState = 2; render(); }
+  else if (reqState === 2) {
+    if (!myNumber || !queue.includes(myNumber)) { reqState = 0; render(); return; }
+    set(request1011Ref, { number: myNumber, ts: Date.now() });
+    reqState = 0;
+    render();
+  }
+}
+
+document.addEventListener('pointerdown', e => {
+  if (reqState === 0) return;
+  if (e.target.closest('[data-role="zero1011"]')) return;
+  reqState = 0;
+  if (reqHold) { clearTimeout(reqHold); reqHold = null; }
+  render();
+});
 
 /* ── DISABLE ZOOM ── */
 // Block pinch-zoom
