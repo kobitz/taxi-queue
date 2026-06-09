@@ -28,6 +28,7 @@ The queue is displayed as a grid of numbered tiles. Each row holds up to 10 posi
 - **Purple tiles (positions 5–8)** — Holding
 - **Light blue tiles (positions 9+, and all overflow rows)** — general queue
 - **Grey "Filler" tile** — use when a position is unknown. Unlimited, always available at the start of the Not in Queue list.
+- **"adjust highest taxi number" tile** — always at the end of Not in Queue. Tap it and type a number to change the highest taxi number shown (minimum 140 on the shared queue, no minimum on personal). The new value syncs to all devices via Firebase.
 
 Row labels (10, 20, 30…) appear on the left when the queue exceeds one row.
 Column labels (1–9) and group labels (Stand / Holding) appear above the grid.

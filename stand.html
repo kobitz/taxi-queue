@@ -667,8 +667,8 @@ dialpadInput.addEventListener('blur', () => {
     maxTileEl = null;
     if (raw) {
       const num = parseInt(raw);
-      if (isNaN(num) || num < 1) {
-        alert(`"${raw}" is not a valid number.`);
+      if (isNaN(num) || num < 140) {
+        alert(`"${raw}" is not a valid number — minimum is 140.`);
       } else {
         MAX_NUM = num;
         localStorage.setItem('taxi-max-num', MAX_NUM);
