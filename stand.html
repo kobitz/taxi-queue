@@ -94,7 +94,9 @@
 
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
-  .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: default !important; }
+  .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: pointer; }
+  .q-zero.primed { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
+  .tile.load-target { box-shadow: 0 0 0 2px #ffd600 !important; filter: brightness(1.2); }
   .q-stand    { background: var(--stand);    box-shadow: 0 4px 14px rgba(21,101,192,.45); }
   .q-hold     { background: var(--holding);  box-shadow: 0 4px 14px rgba(106,27,154,.45); }
   .q-overflow { background: var(--overflow); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
@@ -265,6 +267,7 @@ zoomBtn.addEventListener('click', () => {
 let queue = [];
 let pool  = new Set();
 for (let i = 1; i <= 140; i++) pool.add(i);
+let loadedPrimed = false;
 
 /* Rebuild pool from queue */
 function rebuildPool(q) {
@@ -353,12 +356,13 @@ function renderQueue() {
 
       if (row === 0 && col === 0) {
         tile.classList.add('q-zero');
-        tile.style.fontSize = 'calc(var(--tile) * 0.13)';
+        tile.style.fontSize = 'calc(var(--tile) * 0.20)';
         tile.style.textAlign = 'center';
-        tile.style.lineHeight = '1.2';
         tile.style.padding = '4px';
-        tile.textContent = 'Loaded or Dropped';
+        tile.textContent = 'Loaded';
         tile.dataset.role = 'zero';
+        if (loadedPrimed && queue.length > 0) tile.classList.add('primed');
+        attachDrag(tile, 'zero', null, null);
       } else {
         const qIdx = row === 0 ? (col-1) : ((COLS-1) + (row-1)*COLS + col);
         if (qIdx < queue.length) {
@@ -375,6 +379,7 @@ function renderQueue() {
           tile.dataset.qidx = qIdx;
           tile.dataset.val  = val;
           if (qIdx === selectedQIdx) tile.classList.add('selected');
+          if (loadedPrimed && qIdx === 0) tile.classList.add('load-target');
           attachDrag(tile, 'queue', qIdx, val);
         } else {
           tile.dataset.role = 'empty';
@@ -483,6 +488,7 @@ function attachDrag(el, source, idx, val) {
 // ── Activate drag (show ghost etc) ──
 function activateDrag(cx, cy) {
   if (dnd.canceled) return;
+  if (dnd.source === 'zero') { dnd.canceled = true; return; }
   clearSelected();
   dnd.active = true;
   const el = dnd.srcEl;
@@ -644,18 +650,18 @@ let selectedQIdx = -1; // track by queue index, not element ref (DOM rebuilds on
 
 function clearSelected() {
   selectedQIdx = -1;
+  loadedPrimed = false;
   qGrid.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
 }
 
-// Clear selection when tapping outside a queue tile
-// Clear selection on mouse click outside a queue tile (desktop)
+// Clear selection when tapping outside a queue or loaded tile
 document.addEventListener('pointerdown', e => {
   if (e.pointerType === 'touch') return;
-  if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
+  if (!e.target.closest('.tile[data-role="queue"]') && !e.target.closest('.tile[data-role="zero"]')) clearSelected();
 });
 // Clear selection when tapping a blank area on mobile
 document.addEventListener('touchend', e => {
-  if (!e.target.closest('.tile[data-role="queue"]')) {
+  if (!e.target.closest('.tile[data-role="queue"]') && !e.target.closest('.tile[data-role="zero"]')) {
     setTimeout(clearSelected, 0); // defer so tile's own onTouchEnd runs first
   }
 }, { passive:true });
@@ -664,7 +670,21 @@ function handleTap(el) {
   if (!el) return;
   const role=el.dataset.role, rawVal=el.dataset.val;
   const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
-  if (role==='dummy-src') {
+  if (role==='zero') {
+    if (loadedPrimed) {
+      clearSelected();
+      if (queue.length > 0) {
+        const v = queue[0];
+        if (v === 'dummy') mutate(() => { queue.splice(0, 1); }, 'loaded', 'Filler');
+        else mutate(() => { queue.splice(0, 1); pool.add(v); }, 'loaded', v);
+      }
+    } else {
+      if (queue.length === 0) return;
+      clearSelected();
+      loadedPrimed = true;
+      render();
+    }
+  } else if (role==='dummy-src') {
     mutate(() => { queue.push('dummy'); }, 'added', 'Filler');
   } else if (role==='pool') {
     mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
@@ -690,6 +710,7 @@ function handleTap(el) {
 function moveGhost(x,y) { ghostEl.style.left=(x-dnd.ox)+'px'; ghostEl.style.top=(y-dnd.oy)+'px'; }
 
 function doDrop(target) {
+  if (dnd.source === 'zero') return;
   const val=dnd.val, src=dnd.source, si=dnd.srcIdx;
   const isDummy = (val === 'dummy');
 
