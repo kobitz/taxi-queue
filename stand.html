@@ -91,7 +91,7 @@
   .tile.drag-ready { transform: scale(1.05); box-shadow: 0 0 0 2px var(--highlight); transition: transform .15s, box-shadow .15s; }
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
   .tile.selected  { box-shadow: 0 0 0 2px var(--highlight); filter: brightness(1.35); }
-  .tile.landmark  { filter: brightness(1.5) saturate(1.4); }
+  .tile.landmark  { filter: brightness(1.5) saturate(1.4); background: rgba(128,216,255,.20); }
 
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
   .tile.selected::before { content:'Drop?'; position:absolute; top:4px; left:0; right:0; text-align:center; font-size:calc(var(--tile)*0.18); font-weight:600; opacity:.7; pointer-events:none; }
