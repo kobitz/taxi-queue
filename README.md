@@ -54,6 +54,13 @@ Taxis not currently in the queue live here, always sorted numerically (1–140).
 - **Drag** a queue tile onto the "Loading" tile to remove it directly (no two-tap required)
 - **Drag** a queue tile back down to the Not in Queue area to remove it
 
+### Clearing the Queue
+
+- **Hold the "Loading" tile** (~350ms) to arm it — red border, yellow "Clear All" text
+- **Tap once** → changes to red "Are you sure?"
+- **Tap again** → queue is cleared
+- **Tap anywhere else** at any stage to cancel
+
 ### Reordering
 
 - **Hold and drag** any queue tile to move it to a new position
