@@ -90,7 +90,7 @@
   .tile.dragging   { opacity: .25; transform: scale(.88); }
   .tile.drag-ready { transform: scale(1.05); box-shadow: 0 0 0 2px var(--highlight); transition: transform .15s, box-shadow .15s; }
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
-  .tile.selected { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--highlight); transform: scale(1.05); }
+  .tile.selected { box-shadow: 0 0 0 2px var(--highlight); filter: brightness(1.35); }
 
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
@@ -405,7 +405,6 @@ function attachDrag(el, source, idx, val) {
     if (e.button !== 0) return;
     e.preventDefault();
     const r = el.getBoundingClientRect();
-    clearSelected();
     Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
       ox:e.clientX-r.left, oy:e.clientY-r.top,
       startX:e.clientX, startY:e.clientY, active:false });
@@ -435,6 +434,7 @@ function attachDrag(el, source, idx, val) {
 // ── Activate drag (show ghost etc) ──
 function activateDrag(cx, cy) {
   if (dnd.canceled) return;
+  clearSelected();
   dnd.active = true;
   const el = dnd.srcEl;
   const bg  = getComputedStyle(el).backgroundColor;
@@ -597,7 +597,7 @@ function clearSelected() {
   if (selectedTile) { selectedTile.classList.remove('selected'); selectedTile = null; }
 }
 
-// Tap anywhere outside a queue tile clears selection
+// Clear selection when tapping outside a queue tile
 document.addEventListener('pointerdown', e => {
   if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
 });
