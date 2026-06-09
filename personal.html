@@ -91,6 +91,7 @@
   .tile.drag-ready { transform: scale(1.05); box-shadow: 0 0 0 2px var(--highlight); transition: transform .15s, box-shadow .15s; }
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
   .tile.selected { box-shadow: 0 0 0 2px var(--highlight); filter: brightness(1.35); }
+  .tile.my-tile { filter: brightness(1.5); }
 
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
@@ -219,6 +220,24 @@ zoomBtn.addEventListener('click', () => {
   render();
 });
 
+/* ── MY NUMBER ── */
+let myNumber = parseInt(localStorage.getItem('taxi-my-number') || '0') || null;
+
+function ensureMyNumber() {
+  if (myNumber) return;
+  const raw = prompt('Enter your taxi number (1–140):', '');
+  if (!raw) return;
+  const num = parseInt(raw);
+  if (isNaN(num) || num < 1 || num > 140) {
+    alert(`"${raw}" is not a valid taxi number.`);
+    return;
+  }
+  myNumber = num;
+  localStorage.setItem('taxi-my-number', num);
+}
+
+ensureMyNumber();
+
 /* ── STATE ── */
 let queue = [];
 let pool  = new Set();
@@ -328,6 +347,7 @@ function renderQueue() {
           } else {
             tile.textContent = val;
             tile.classList.add(qIdx < 4 ? 'q-stand' : qIdx < 8 ? 'q-hold' : 'q-overflow');
+            if (val === myNumber) tile.classList.add('my-tile');
           }
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
@@ -370,6 +390,7 @@ function renderPool() {
   [...pool].sort((a,b)=>a-b).forEach(num => {
     const tile = document.createElement('div');
     tile.className = 'tile pool';
+    if (num === myNumber) tile.classList.add('my-tile');
     tile.textContent = num;
     tile.dataset.role = 'pool';
     tile.dataset.val  = num;
