@@ -8,7 +8,7 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 
 | File | URL | Description |
 |------|-----|-------------|
-| `index.html` | `/` | **Live view** — read-only, updates in real time; highlights your taxi number |
+| `index.html` | `/` | **Live view** — read-only, updates in real time; highlights your taxi number; 10-11 request button |
 | `stand.html` | `/stand.html` | **Editable queue** — add, remove, reorder taxis; syncs to all devices |
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
 | `history.html` | `/history.html` | **Change log** — live feed of every add, remove, load, and move |
@@ -24,6 +24,7 @@ Hosted at: `https://kobitz.github.io/taxi-queue`
 The queue is displayed as a grid of numbered tiles. Each row holds up to 10 positions (or 5 in Bigger Tiles mode).
 
 - **Grey "Loading" tile** — the first slot. Tap once to prime it — the tile text changes to "Loaded", a yellow border appears, and the first queue tile highlights in yellow. Tap again to remove that taxi as loaded. You can also drag any queue tile directly onto it.
+- **Grey "10-11" tile** — only on `index.html`. Hold (~350ms) to arm it — yellow border, "Request 10-11?". Tap once → red "Are you sure?". Tap again → sends a request to `stand.html`. Only works if your registered taxi number is currently in the queue. Tap anywhere else to cancel.
 - **Blue tiles (positions 1–4)** — Stand
 - **Purple tiles (positions 5–8)** — Holding
 - **Light blue tiles (positions 9+, and all overflow rows)** — general queue
@@ -75,6 +76,17 @@ Taxis not currently in the queue live here, always sorted numerically (1–140).
 
 ---
 
+## 10-11 Requests (`index.html` → `stand.html`)
+
+When a driver holds the "10-11" tile in the live view, a modal appears on `stand.html` showing **"#X has requested a 10-11"** with two options:
+
+- **OK** — removes the taxi from the queue and logs the action as a 10-11 entry in history
+- **Undo** — dismisses the request, leaving the taxi in queue
+
+If multiple stand.html instances are open, all of them receive the notification simultaneously.
+
+---
+
 ## My Taxi Highlight
 
 On first load of `index.html` or `personal.html`, you are prompted to enter your taxi number. Your tile is then highlighted with a green glow wherever it appears — in the queue or in the Not in Queue list. In the Stand and Holding zones, your tile also gets extra brightness on top of the zone color. This number is saved per device per browser.
@@ -107,6 +119,7 @@ Every action on `stand.html` is logged:
 | **Removed** | Taxi returned to Not in Queue |
 | **Loaded** | Taxi removed via the Loading tile (tap or drag) |
 | **Moved** | Taxi reordered within the queue |
+| **10-11** | Taxi removed via a 10-11 request from the live view |
 
 Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. History can be cleared with the Clear All button.
 
