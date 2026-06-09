@@ -435,7 +435,7 @@ function renderPool() {
   // Filler-front tile — always first, inserts at front of queue
   const dummyFront = document.createElement('div');
   dummyFront.className = 'tile';
-  dummyFront.textContent = 'Filler In-Front';
+  dummyFront.innerHTML = 'Filler<br>In-Front';
   dummyFront.style.cssText = 'background:rgba(180,180,180,.15);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.5);font-size:calc(var(--tile)*0.13);text-align:center;line-height:1.2;';
   dummyFront.dataset.role = 'filler-front-src';
   dummyFront.dataset.val  = 'filler';
