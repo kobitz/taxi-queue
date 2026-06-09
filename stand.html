@@ -249,6 +249,7 @@ function getFullDeviceLabel() {
 
 /* ── LOG CHANGE ── */
 function logChange(action, value) {
+  if (value === 'Filler') return;
   ensureDeviceName();
   push(historyRef, {
     action,
