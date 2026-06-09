@@ -164,6 +164,7 @@
 </section>
 
 <div id="ghost"></div>
+<div id="debug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,.7);color:#ff0;font-size:11px;padding:4px 8px;border-radius:6px;z-index:9999;pointer-events:none;font-family:monospace;"></div>
 <input id="dialpad-input" type="tel" inputmode="numeric" pattern="[0-9]*">
 
 <script type="module">
@@ -650,10 +651,12 @@ document.addEventListener('pointerdown', e => {
 });
 // Clear selection on touch outside queue tile handled in handleTap
 
+const dbg = document.getElementById('debug');
 function handleTap(el) {
   if (!el) return;
   const role=el.dataset.role, rawVal=el.dataset.val;
   const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
+  dbg.textContent = `tap: role=${role} val=${val} selIdx=${selectedQIdx} idx=${el.dataset.qidx}`;
   if (role==='dummy-src') {
     mutate(() => { queue.push('dummy'); }, 'added', 'Filler');
   } else if (role==='pool') {
