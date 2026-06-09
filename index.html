@@ -146,6 +146,7 @@ const app = initializeApp({
 });
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
+const maxRef   = ref(db, 'maxNum');
 
 const syncEl = document.getElementById('sync-status');
 
@@ -179,13 +180,25 @@ zoomBtn.addEventListener('click', () => {
 /* ── MY NUMBER ── */
 let myNumber = parseInt(localStorage.getItem('taxi-my-number') || '0') || null;
 
+/* ── STATE ── */
+let MAX_NUM = 140;
+let queue = [];
+let pool  = new Set();
+for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
+
+function rebuildPool(q) {
+  pool = new Set();
+  for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
+  for (const v of q) if (typeof v === 'number') pool.delete(v);
+}
+
 function ensureMyNumber() {
   if (myNumber) return;
-  const raw = prompt('Enter your taxi number (1–140):', '');
+  const raw = prompt(`Enter your taxi number (1–${MAX_NUM}):`, '');
   if (!raw) return;
   const num = parseInt(raw);
-  if (isNaN(num) || num < 1 || num > 140) {
-    alert(`"${raw}" is not a valid taxi number.`);
+  if (isNaN(num) || num < 1 || num > MAX_NUM) {
+    alert(`"${raw}" is not a valid taxi number (1–${MAX_NUM}).`);
     return;
   }
   myNumber = num;
@@ -194,17 +207,6 @@ function ensureMyNumber() {
 
 // Ask on first load
 ensureMyNumber();
-
-/* ── STATE ── */
-let queue = [];
-let pool  = new Set();
-for (let i = 1; i <= 140; i++) pool.add(i);
-
-function rebuildPool(q) {
-  pool = new Set();
-  for (let i = 1; i <= 140; i++) pool.add(i);
-  for (const v of q) if (v !== 'filler') pool.delete(v);
-}
 
 /* ── LIVE LISTENER (read only) ── */
 onValue(queueRef, snapshot => {
@@ -217,6 +219,15 @@ onValue(queueRef, snapshot => {
 }, () => {
   syncEl.className = 'error';
   syncEl.textContent = 'OFFLINE';
+});
+
+onValue(maxRef, snapshot => {
+  const val = snapshot.val();
+  if (val && typeof val === 'number' && val !== MAX_NUM) {
+    MAX_NUM = val;
+    rebuildPool(queue);
+    render();
+  }
 });
 
 /* ── DOM ── */

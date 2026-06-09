@@ -231,11 +231,11 @@ let myNumber = parseInt(localStorage.getItem('taxi-my-number') || '0') || null;
 
 function ensureMyNumber() {
   if (myNumber) return;
-  const raw = prompt('Enter your taxi number (1–140):', '');
+  const raw = prompt(`Enter your taxi number (1–${MAX_NUM}):`, '');
   if (!raw) return;
   const num = parseInt(raw);
-  if (isNaN(num) || num < 1 || num > 140) {
-    alert(`"${raw}" is not a valid taxi number.`);
+  if (isNaN(num) || num < 1 || num > MAX_NUM) {
+    alert(`"${raw}" is not a valid taxi number (1–${MAX_NUM}).`);
     return;
   }
   myNumber = num;
@@ -245,16 +245,17 @@ function ensureMyNumber() {
 ensureMyNumber();
 
 /* ── STATE ── */
+let MAX_NUM = parseInt(localStorage.getItem('taxi-max-num') || '140');
 let queue = [];
 let pool  = new Set();
-for (let i = 1; i <= 140; i++) pool.add(i);
+for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
 let loadedPrimed = false;
 
 /* Rebuild pool from queue */
 function rebuildPool(q) {
   pool = new Set();
-  for (let i = 1; i <= 140; i++) pool.add(i);
-  for (const v of q) pool.delete(v);
+  for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
+  for (const v of q) if (typeof v === 'number') pool.delete(v);
 }
 
 /* ── LOAD FROM LOCALSTORAGE ── */
@@ -406,6 +407,14 @@ function renderPool() {
     attachDrag(tile, 'pool', null, num);
     pGrid.appendChild(tile);
   });
+
+  const maxTile = document.createElement('div');
+  maxTile.className = 'tile';
+  maxTile.style.cssText = 'background:rgba(128,216,255,.06);border:1.5px dashed rgba(128,216,255,.2);color:rgba(128,216,255,.4);font-size:calc(var(--tile)*0.13);text-align:center;line-height:1.2;padding:4px;cursor:pointer;';
+  maxTile.textContent = 'adjust highest taxi number';
+  maxTile.addEventListener('click', () => openMaxDialpad(maxTile));
+  maxTile.addEventListener('touchend', e => { e.preventDefault(); openMaxDialpad(maxTile); }, { passive: false });
+  pGrid.appendChild(maxTile);
 }
 
 /* ── STATE MUTATORS ── */
@@ -585,10 +594,22 @@ function finishDrag(el) {
 
 /* ── DIALPAD INPUT ── */
 const dialpadInput = document.getElementById('dialpad-input');
-let addTileEl = null; // reference to the current + tile
+let addTileEl = null;
+let maxTileEl = null;
 
 function openDialpad(tileEl) {
   addTileEl = tileEl;
+  maxTileEl = null;
+  tileEl.textContent = '_';
+  tileEl.style.fontSize = 'calc(var(--tile) * 0.35)';
+  dialpadInput.value = '';
+  dialpadInput.style.pointerEvents = 'auto';
+  dialpadInput.focus();
+}
+
+function openMaxDialpad(tileEl) {
+  maxTileEl = tileEl;
+  addTileEl = null;
   tileEl.textContent = '_';
   tileEl.style.fontSize = 'calc(var(--tile) * 0.35)';
   dialpadInput.value = '';
@@ -597,10 +618,11 @@ function openDialpad(tileEl) {
 }
 
 dialpadInput.addEventListener('input', () => {
-  if (!addTileEl) return;
+  const target = addTileEl || maxTileEl;
+  if (!target) return;
   const raw = dialpadInput.value.trim();
-  addTileEl.textContent = raw || '_';
-  addTileEl.style.fontSize = raw.length > 2
+  target.textContent = raw || '_';
+  target.style.fontSize = raw.length > 2
     ? 'calc(var(--tile) * 0.28)'
     : 'calc(var(--tile) * 0.35)';
 });
@@ -610,7 +632,23 @@ dialpadInput.addEventListener('keydown', e => { if (e.key === 'Enter') dialpadIn
 dialpadInput.addEventListener('blur', () => {
   dialpadInput.style.pointerEvents = 'none';
   const raw = dialpadInput.value.trim();
-  // Reset tile appearance
+
+  if (maxTileEl) {
+    maxTileEl = null;
+    if (raw) {
+      const num = parseInt(raw);
+      if (isNaN(num) || num < 1) {
+        alert(`"${raw}" is not a valid number.`);
+      } else {
+        MAX_NUM = num;
+        localStorage.setItem('taxi-max-num', MAX_NUM);
+        rebuildPool(queue);
+      }
+    }
+    render();
+    return;
+  }
+
   if (addTileEl) {
     addTileEl.textContent = '+';
     addTileEl.style.fontSize = '';
@@ -618,8 +656,8 @@ dialpadInput.addEventListener('blur', () => {
   }
   if (!raw) return;
   const num = parseInt(raw);
-  if (isNaN(num) || num < 1 || num > 140) {
-    alert(`"${raw}" is not a valid taxi number (1–140).`);
+  if (isNaN(num) || num < 1 || num > MAX_NUM) {
+    alert(`"${raw}" is not a valid taxi number (1–${MAX_NUM}).`);
     return;
   }
   if (!pool.has(num)) {
