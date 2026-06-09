@@ -61,20 +61,20 @@
   @keyframes fadeIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }
 
   .entry.added    { border-left: 3px solid #1565c0; }
-  .entry.removed  { border-left: 3px solid rgba(255,255,255,.2); }
+  .entry.removed  { border-left: 3px solid #ff5555; }
   .entry.loaded   { border-left: 3px solid #ffd600; }
   .entry.moved    { border-left: 3px solid #6a1b9a; }
-  .entry.req1011  { border-left: 3px solid #ff5555; }
+  .entry.req1011  { border-left: 3px solid #ffd600; }
 
   .entry-action {
     font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
     padding: 2px 6px; border-radius: 10px; text-align: center; white-space: nowrap;
   }
   .added   .entry-action { background: rgba(21,101,192,.4);  color: #90caf9; }
-  .removed .entry-action { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
+  .removed .entry-action { background: rgba(255,85,85,.25);  color: #ff8080; }
   .loaded  .entry-action { background: rgba(255,214,0,.25);  color: #ffd600; }
   .moved   .entry-action { background: rgba(106,27,154,.4);  color: #ce93d8; }
-  .req1011 .entry-action { background: rgba(255,85,85,.25);  color: #ff8080; }
+  .req1011 .entry-action { background: rgba(255,214,0,.25);  color: #ffd600; }
 
   .entry-main { display: flex; flex-direction: column; gap: 2px; }
   .entry-value { font-size: 15px; font-weight: 700; }
