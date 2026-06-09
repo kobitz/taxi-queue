@@ -652,6 +652,8 @@ function clearSelected() {
   selectedQIdx = -1;
   loadedPrimed = false;
   qGrid.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
+  qGrid.querySelectorAll('.tile.load-target').forEach(t => t.classList.remove('load-target'));
+  document.querySelector('.tile[data-role="zero"]')?.classList.remove('primed');
 }
 
 // Clear selection when tapping outside a queue or loaded tile
