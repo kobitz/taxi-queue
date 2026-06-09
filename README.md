@@ -43,7 +43,7 @@ Taxis not currently in the queue live here, always sorted numerically (1–140).
 ### Adding to the Queue
 
 - **Tap** any tile in the Not in Queue list to add it to the end of the queue
-- **Tap the "+" tile** (the next open slot in the queue grid) to type a taxi number directly via the dialpad — useful for jumping straight to a specific position
+- **Tap the "+" tile** (the next open slot in the queue grid) to type a taxi number directly via the dialpad.
 - **Drag** a tile up into a specific position in the queue
 
 ### Removing from the Queue
