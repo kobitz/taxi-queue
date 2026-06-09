@@ -23,7 +23,7 @@ Hosted at: `https://kobitz.github.io/taxi-queue`
 
 The queue is displayed as a grid of numbered tiles. Each row holds up to 10 positions (or 5 in Bigger Tiles mode).
 
-- **Grey "Loading" tile** — the first slot. Tap once to prime it (yellow border appears and the first queue tile highlights in yellow), then tap again to remove that taxi as loaded. You can also drag any queue tile directly onto it.
+- **Grey "Loading" tile** — the first slot. Tap once to prime it — the tile text changes to "Loaded", a yellow border appears, and the first queue tile highlights in yellow. Tap again to remove that taxi as loaded. You can also drag any queue tile directly onto it.
 - **Blue tiles (positions 1–4)** — Stand
 - **Purple tiles (positions 5–8)** — Holding
 - **Light blue tiles (positions 9+, and all overflow rows)** — general queue
@@ -43,12 +43,12 @@ Taxis not currently in the queue live here, always sorted numerically (1–140).
 ### Adding to the Queue
 
 - **Tap** any tile in the Not in Queue list to add it to the end of the queue
-- **Tap the "+" tile** (the next open slot in the queue grid) to type a taxi number directly via the dialpad.
+- **Tap the "+" tile** (the next open slot in the queue grid) to type a taxi number directly via the dialpad — on desktop, press Enter or click away to confirm.
 - **Drag** a tile up into a specific position in the queue
 
 ### Removing from the Queue
 
-- **Tap twice** any queue tile to remove it — first tap highlights it, second tap removes it and returns it to Not in Queue
+- **Tap twice** any queue tile to remove it — first tap highlights it and shows a "Drop?" label, second tap removes it and returns it to Not in Queue
 - **Tap "Loading"** once to prime it (first queue tile highlights yellow), then tap again to remove that taxi and log it as Loaded
 - **Drag** a queue tile onto the "Loading" tile to remove it directly (no two-tap required)
 - **Drag** a queue tile back down to the Not in Queue area to remove it
@@ -96,7 +96,7 @@ Every action on `stand.html` is logged:
 |--------|---------|
 | **Added** | Taxi moved into the queue |
 | **Removed** | Taxi returned to Not in Queue |
-| **Loaded** | Taxi removed via the Loaded tile (tap or drag) |
+| **Loaded** | Taxi removed via the Loading tile (tap or drag) |
 | **Moved** | Taxi reordered within the queue |
 
 Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. History can be cleared with the Clear All button.
