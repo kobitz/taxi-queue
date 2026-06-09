@@ -399,11 +399,15 @@ const dnd = {
   canceled: false,
 };
 
+let lastTouchTime = 0; // track last touch to block synthetic mouse events on mobile
+
 function attachDrag(el, source, idx, val) {
   // ── MOUSE (desktop) ──
   el.addEventListener('dragstart', e => e.preventDefault());
   el.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
+    // Block synthetic mouse events fired by browser after touch (iOS/Android)
+    if (Date.now() - lastTouchTime < 500) return;
     e.preventDefault();
     const r = el.getBoundingClientRect();
     Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
@@ -415,6 +419,7 @@ function attachDrag(el, source, idx, val) {
 
   // ── TOUCH (mobile) — passive so scroll is never blocked ──
   el.addEventListener('touchstart', e => {
+    lastTouchTime = Date.now(); // mark that a real touch happened
     const t = e.touches[0];
     const r = el.getBoundingClientRect();
     Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
