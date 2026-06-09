@@ -25,7 +25,6 @@
   body { background: var(--bg); min-height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; padding: var(--pad); }
 
   h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--highlight); margin-bottom: 8px; opacity: 0.75; }
-  .divider { height: 1px; background: linear-gradient(90deg,transparent,rgba(128,216,255,.3),transparent); margin: 14px 0; }
 
   #sync-status {
     position: fixed; top: 16px; right: 130px;
@@ -93,11 +92,6 @@
   .tile.landmark { filter: brightness(1.5) saturate(1.4); background: rgba(128,216,255,.20); }
   .q-empty.hidden-slot { visibility: hidden; }
 
-  /* POOL */
-  #pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
-  .tile.pool { background: rgba(128,216,255,.12); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
-  .tile.filler-src { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); font-size: calc(var(--tile)*0.16); }
-
   #zoom-btn {
     position: fixed; top: 6px; right: 6px;
     font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
@@ -130,12 +124,6 @@
   </div>
 </section>
 
-<div class="divider"></div>
-
-<section>
-  <h2>Not in Queue</h2>
-  <div id="pool-grid"></div>
-</section>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -184,14 +172,6 @@ let myNumber = parseInt(localStorage.getItem('taxi-my-number') || '0') || null;
 /* ── STATE ── */
 let MAX_NUM = 140;
 let queue = [];
-let pool  = new Set();
-for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
-
-function rebuildPool(q) {
-  pool = new Set();
-  for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
-  for (const v of q) if (typeof v === 'number') pool.delete(v);
-}
 
 function ensureMyNumber() {
   if (myNumber) return;
@@ -213,7 +193,6 @@ ensureMyNumber();
 onValue(queueRef, snapshot => {
   const data = snapshot.val();
   queue = Array.isArray(data) ? data : (data ? Object.values(data) : []);
-  rebuildPool(queue);
   render();
   syncEl.className = 'ok';
   syncEl.textContent = 'LIVE';
@@ -226,7 +205,6 @@ onValue(maxRef, snapshot => {
   const val = snapshot.val();
   if (val && typeof val === 'number' && val !== MAX_NUM) {
     MAX_NUM = val;
-    rebuildPool(queue);
     render();
   }
 });
@@ -236,10 +214,9 @@ const qGrid      = document.getElementById('queue-grid');
 const qGrpHdrs   = document.getElementById('group-headers');
 const qColHdrs   = document.getElementById('col-headers');
 const qRowLabels = document.getElementById('row-labels');
-const pGrid      = document.getElementById('pool-grid');
 
 /* ── RENDER ── */
-function render() { renderQueue(); renderPool(); }
+function render() { renderQueue(); }
 
 function renderQueue() {
   const qLen = queue.length;
@@ -331,23 +308,6 @@ function renderQueue() {
   }
 }
 
-function renderPool() {
-  pGrid.innerHTML = '';
-  pGrid.style.gridTemplateColumns = `repeat(${COLS}, var(--tile))`;
-  // Filler tile (display only)
-  const filler = document.createElement('div');
-  filler.className = 'tile filler-src';
-  filler.textContent = 'Filler';
-  pGrid.appendChild(filler);
-
-  [...pool].sort((a,b)=>a-b).forEach(num => {
-    const tile = document.createElement('div');
-    tile.className = 'tile pool';
-    if (num === myNumber) tile.classList.add('my-tile');
-    tile.textContent = num;
-    pGrid.appendChild(tile);
-  });
-}
 
 /* ── DISABLE ZOOM ── */
 // Block pinch-zoom
