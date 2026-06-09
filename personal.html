@@ -90,6 +90,8 @@
   .tile.dragging   { opacity: .25; transform: scale(.88); }
   .tile.drag-ready { transform: scale(1.05); box-shadow: 0 0 0 2px var(--highlight); transition: transform .15s, box-shadow .15s; }
   .tile.drop-ok  { box-shadow: 0 0 0 3px var(--highlight); transform: scale(1.07); }
+  .tile.selected { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--highlight); transform: scale(1.05); }
+
   .tile .sub { position:absolute; bottom:3px; right:5px; font-size:calc(var(--tile)*0.11); font-weight:400; opacity:.5; }
 
   .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: default !important; }
@@ -403,6 +405,7 @@ function attachDrag(el, source, idx, val) {
     if (e.button !== 0) return;
     e.preventDefault();
     const r = el.getBoundingClientRect();
+    clearSelected();
     Object.assign(dnd, { srcEl:el, val, source, srcIdx:idx, canceled:false,
       ox:e.clientX-r.left, oy:e.clientY-r.top,
       startX:e.clientX, startY:e.clientY, active:false });
@@ -587,6 +590,18 @@ dialpadInput.addEventListener('blur', () => {
   mutate(() => { pool.delete(num); queue.push(num); }, 'added', num);
 });
 
+/* ── SELECTED TILE (double-tap to remove) ── */
+let selectedTile = null;
+
+function clearSelected() {
+  if (selectedTile) { selectedTile.classList.remove('selected'); selectedTile = null; }
+}
+
+// Tap anywhere outside a queue tile clears selection
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
+});
+
 function handleTap(el) {
   if (!el) return;
   const role=el.dataset.role, rawVal=el.dataset.val;
@@ -596,11 +611,18 @@ function handleTap(el) {
   } else if (role==='pool') {
     mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
   } else if (role==='queue') {
-    const idx=parseInt(el.dataset.qidx);
-    if (val === 'filler') {
-      mutate(() => { queue.splice(idx,1); }, 'removed', 'Filler');
+    if (selectedTile === el) {
+      clearSelected();
+      const idx=parseInt(el.dataset.qidx);
+      if (val === 'filler') {
+        mutate(() => { queue.splice(idx,1); });
+      } else {
+        mutate(() => { queue.splice(idx,1); pool.add(val); });
+      }
     } else {
-      mutate(() => { queue.splice(idx,1); pool.add(val); }, 'removed', val);
+      clearSelected();
+      selectedTile = el;
+      el.classList.add('selected');
     }
   }
 }
