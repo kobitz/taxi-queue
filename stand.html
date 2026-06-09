@@ -374,6 +374,7 @@ function renderQueue() {
           tile.dataset.role = 'queue';
           tile.dataset.qidx = qIdx;
           tile.dataset.val  = val;
+          if (qIdx === selectedQIdx) tile.classList.add('selected');
           attachDrag(tile, 'queue', qIdx, val);
         } else {
           tile.dataset.role = 'empty';
@@ -634,21 +635,20 @@ dialpadInput.addEventListener('blur', () => {
 });
 
 /* ── SELECTED TILE (double-tap to remove) ── */
-let selectedTile = null;
+let selectedQIdx = -1; // track by queue index, not element ref (DOM rebuilds on render)
 
 function clearSelected() {
-  if (selectedTile) { selectedTile.classList.remove('selected'); selectedTile = null; }
+  selectedQIdx = -1;
+  qGrid.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
 }
 
 // Clear selection when tapping outside a queue tile
+// Clear selection on mouse click outside a queue tile (desktop)
 document.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'touch') return; // touch handled via touchstart/end
+  if (e.pointerType === 'touch') return;
   if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
 });
-// Clear selection on touch outside a queue tile
-document.addEventListener('touchstart', e => {
-  if (!e.target.closest('.tile[data-role="queue"]')) clearSelected();
-}, { passive:true });
+// Clear selection on touch outside queue tile handled in handleTap
 
 function handleTap(el) {
   if (!el) return;
@@ -659,10 +659,10 @@ function handleTap(el) {
   } else if (role==='pool') {
     mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
   } else if (role==='queue') {
-    if (selectedTile === el) {
+    const idx=parseInt(el.dataset.qidx);
+    if (selectedQIdx === idx) {
       // Second tap — remove
       clearSelected();
-      const idx=parseInt(el.dataset.qidx);
       if (val === 'dummy') {
         mutate(() => { queue.splice(idx,1); }, 'removed', 'Filler');
       } else {
@@ -671,7 +671,7 @@ function handleTap(el) {
     } else {
       // First tap — highlight
       clearSelected();
-      selectedTile = el;
+      selectedQIdx = idx;
       el.classList.add('selected');
     }
   }
