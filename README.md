@@ -11,7 +11,7 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `index.html` | `/` | **Live view** — read-only, updates in real time; highlights your taxi number; 10-11 request button |
 | `stand.html` | `/stand.html` | **Editable queue** — add, remove, reorder taxis; syncs to all devices |
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
-| `history.html` | `/history.html` | **Change log** — live feed of every add, remove, load, and move |
+| `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
 
 Hosted at: `https://kobitz.github.io/taxi-queue`
 
@@ -37,7 +37,7 @@ Column labels (1–9) and group labels (Stand / Holding) appear above the grid.
 
 ### Not in Queue
 
-Taxis not currently in the queue live here, always sorted numerically (1–140). The Filler tile is always first.
+Taxis not currently in the queue live here, always sorted numerically (1 to the highest taxi number, default 140). Filler In-Front and Filler tiles are always first.
 
 ---
 
@@ -89,7 +89,7 @@ If multiple stand.html instances are open, all of them receive the notification 
 
 ## My Taxi Highlight
 
-On first load of `index.html` or `personal.html`, you are prompted to enter your taxi number. Your tile is then highlighted with a green glow wherever it appears — in the queue or in the Not in Queue list. In the Stand and Holding zones, your tile also gets extra brightness on top of the zone color. This number is saved per device per browser.
+On first load of `index.html` or `personal.html`, you are prompted to enter your taxi number. Your tile is highlighted with a green glow in the queue. On `personal.html` it also glows in the Not in Queue list. In the Stand and Holding zones, your tile gets extra brightness on top of the zone color. This number is saved per device per browser.
 
 ---
 
