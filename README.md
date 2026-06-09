@@ -116,7 +116,7 @@ Every action on `stand.html` is logged:
 | Action | Meaning |
 |--------|---------|
 | **Added** | Taxi moved into the queue |
-| **Removed** | Taxi returned to Not in Queue |
+| **Dropped** | Taxi returned to Not in Queue |
 | **Loaded** | Taxi removed via the Loading tile (tap or drag) |
 | **Moved** | Taxi reordered within the queue |
 | **10-11** | Taxi removed via a 10-11 request from the live view |
