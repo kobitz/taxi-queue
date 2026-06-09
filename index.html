@@ -90,6 +90,7 @@
   .q-hold     { background: var(--holding);  box-shadow: 0 4px 14px rgba(106,27,154,.45); }
   .q-overflow { background: var(--overflow); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
   .q-empty    { background: var(--empty); border: 1.5px dashed rgba(255,255,255,.13); }
+  .tile.landmark { filter: brightness(1.5); }
   .q-empty.hidden-slot { visibility: hidden; }
 
   /* POOL */
@@ -317,6 +318,7 @@ function renderQueue() {
             tile.textContent = val;
             tile.classList.add(qIdx < 4 ? 'q-stand' : qIdx < 8 ? 'q-hold' : 'q-overflow');
             if (val === myNumber) tile.classList.add('my-tile');
+            if (qIdx === 9 || qIdx === 14 || qIdx === 19) tile.classList.add('landmark');
           }
         } else {
           tile.classList.add('q-empty');
