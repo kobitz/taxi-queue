@@ -110,11 +110,23 @@
     color: rgba(128,216,255,.5); font-size: calc(var(--tile)*0.45);
     cursor: pointer; line-height: 1; }
   .q-add:hover { background: rgba(128,216,255,.08); border-color: rgba(128,216,255,.6); color: rgba(128,216,255,.8); }
-  /* Hidden numeric input used to trigger dialpad */
-  #dialpad-input {
-    position: fixed; opacity: 0; pointer-events: none;
-    top: 50%; left: 50%; width: 1px; height: 1px;
-  }
+
+  /* TABS + DIAL PAD */
+  .tabs { display:flex; gap:18px; margin-bottom:8px; }
+  .tabs h2 { margin:0; cursor:pointer; padding:6px 0 4px; border-bottom:2px solid transparent; opacity:.4; }
+  .tabs h2.active { opacity:.9; border-bottom-color:var(--highlight); }
+  #pad-panel { display:none; max-width:320px; }
+  #pad-display { height:56px; border-radius:var(--r); background:var(--empty); border:1.5px solid rgba(128,216,255,.3);
+    display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; margin-bottom:var(--gap); letter-spacing:2px; }
+  #pad-display.err { color:#ff8080; font-size:15px; letter-spacing:0; text-align:center; padding:0 6px; }
+  #pad-display small { font-size:11px; opacity:.6; margin-left:8px; letter-spacing:1px; }
+  #pad-keys { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap); }
+  .pad-key { height:58px; border-radius:var(--r); background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22);
+    color:#fff; font-size:24px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .pad-key:active { background:rgba(128,216,255,.35); }
+  .pad-key.fn { font-size:18px; color:var(--highlight); }
+  .pad-key.go { background:var(--stand); border-color:transparent; }
+  .pad-key.go:active { filter:brightness(1.3); }
 
   /* POOL */
   #pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
@@ -183,8 +195,13 @@
 <div class="divider"></div>
 
 <section>
-  <h2>Not in Queue</h2>
+  <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2><h2 id="tab-pad">Dial Pad</h2></div>
   <div id="pool-grid"></div>
+  <div id="pad-panel">
+    <div id="pad-display">_</div>
+    <div id="pad-keys"></div>
+  </div>
+
 </section>
 
 <div id="req1011-modal">
@@ -199,7 +216,6 @@
 </div>
 
 <div id="ghost"></div>
-<input id="dialpad-input" type="tel" inputmode="numeric" pattern="[0-9]*">
 
 <script type="module">
 import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -481,8 +497,8 @@ function renderQueue() {
             // The next available slot — show as + button
             tile.classList.add('q-add');
             tile.textContent = '+';
-            tile.addEventListener('click', () => openDialpad(tile));
-            tile.addEventListener('touchend', e => { e.preventDefault(); openDialpad(tile); }, { passive:false });
+            tile.addEventListener('click', () => openDialpad());
+            tile.addEventListener('touchend', e => { e.preventDefault(); openDialpad(); }, { passive:false });
           } else {
             tile.classList.add('q-empty');
             if (qIdx > queue.length) tile.classList.add('hidden-slot');
@@ -532,8 +548,8 @@ function renderPool() {
   maxTile.className = 'tile';
   maxTile.style.cssText = 'background:rgba(128,216,255,.06);border:1.5px dashed rgba(128,216,255,.2);color:rgba(128,216,255,.4);font-size:calc(var(--tile)*0.13);text-align:center;line-height:1.2;padding:4px;cursor:pointer;';
   maxTile.textContent = 'adjust highest taxi number';
-  maxTile.addEventListener('click', () => openMaxDialpad(maxTile));
-  maxTile.addEventListener('touchend', e => { e.preventDefault(); openMaxDialpad(maxTile); }, { passive: false });
+  maxTile.addEventListener('click', () => openMaxDialpad());
+  maxTile.addEventListener('touchend', e => { e.preventDefault(); openMaxDialpad(); }, { passive: false });
   pGrid.appendChild(maxTile);
 }
 
@@ -736,81 +752,54 @@ function finishDrag(el) {
 }
 
 
-/* ── DIALPAD INPUT ── */
-const dialpadInput = document.getElementById('dialpad-input');
-let addTileEl = null;
-let maxTileEl = null;
-
-function openDialpad(tileEl) {
-  addTileEl = tileEl;
-  maxTileEl = null;
-  tileEl.textContent = '_';
-  tileEl.style.fontSize = 'calc(var(--tile) * 0.35)';
-  dialpadInput.value = '';
-  dialpadInput.style.pointerEvents = 'auto';
-  dialpadInput.focus();
+/* ── DIAL PAD (on-page) ── */
+const tabNQ = document.getElementById('tab-nq'), tabPad = document.getElementById('tab-pad');
+const padPanel = document.getElementById('pad-panel'), padDisplay = document.getElementById('pad-display');
+let padValue = '', padMode = 'add';
+function showTab(which) {
+  const pad = which === 'pad';
+  tabPad.classList.toggle('active', pad); tabNQ.classList.toggle('active', !pad);
+  padPanel.style.display = pad ? 'block' : 'none';
+  pGrid.style.display = pad ? 'none' : '';
 }
-
-function openMaxDialpad(tileEl) {
-  maxTileEl = tileEl;
-  addTileEl = null;
-  tileEl.textContent = '_';
-  tileEl.style.fontSize = 'calc(var(--tile) * 0.35)';
-  dialpadInput.value = '';
-  dialpadInput.style.pointerEvents = 'auto';
-  dialpadInput.focus();
+function padRender(err) {
+  padDisplay.classList.toggle('err', !!err);
+  if (err) { padDisplay.textContent = err; return; }
+  padDisplay.innerHTML = (padValue || '_') + (padMode === 'max' ? '<small>HIGHEST #</small>' : '');
 }
-
-dialpadInput.addEventListener('input', () => {
-  const target = addTileEl || maxTileEl;
-  if (!target) return;
-  const raw = dialpadInput.value.trim();
-  target.textContent = raw || '_';
-  target.style.fontSize = raw.length > 2
-    ? 'calc(var(--tile) * 0.28)'
-    : 'calc(var(--tile) * 0.35)';
-});
-
-dialpadInput.addEventListener('keydown', e => { if (e.key === 'Enter') dialpadInput.blur(); });
-
-dialpadInput.addEventListener('blur', () => {
-  dialpadInput.style.pointerEvents = 'none';
-  const raw = dialpadInput.value.trim();
-
-  if (maxTileEl) {
-    maxTileEl = null;
-    if (raw) {
-      const num = parseInt(raw);
-      if (isNaN(num) || num < 140) {
-        alert(`"${raw}" is not a valid number — minimum is 140.`);
-      } else {
-        MAX_NUM = num;
-        localStorage.setItem('taxi-max-num', MAX_NUM);
-        set(maxRef, MAX_NUM);
-        rebuildPool(queue);
-      }
-    }
-    render();
-    return;
+function openDialpad() { padMode = 'add'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+function openMaxDialpad() { padMode = 'max'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+function padSubmit() {
+  const raw = padValue; if (!raw) return;
+  const num = parseInt(raw, 10);
+  if (padMode === 'max') {
+    if (isNaN(num) || num < 140) { padValue = ''; padRender(`${num} is too low — minimum is 140.`); return; }
+    padValue = ''; padMode = 'add';
+    MAX_NUM = num; localStorage.setItem('taxi-max-num', MAX_NUM); set(maxRef, MAX_NUM); rebuildPool(queue);
+    padRender(); render(); return;
   }
-
-  if (addTileEl) {
-    addTileEl.textContent = '+';
-    addTileEl.style.fontSize = '';
-    addTileEl = null;
-  }
-  if (!raw) return;
-  const num = parseInt(raw);
-  if (isNaN(num) || num < 1 || num > MAX_NUM) {
-    alert(`"${raw}" is not a valid taxi number (1–${MAX_NUM}).`);
-    return;
-  }
-  if (!pool.has(num)) {
-    alert(`Taxi ${num} is already in the queue.`);
-    return;
-  }
+  if (isNaN(num) || num < 1 || num > MAX_NUM) { padValue = ''; padRender(`${raw} is not valid (1–${MAX_NUM}).`); return; }
+  if (!pool.has(num)) { padValue = ''; padRender(`Taxi ${num} is already in the queue.`); return; }
+  padValue = '';
   mutate(() => { pool.delete(num); queue.push(num); }, 'added', num);
+  padRender();
+}
+['1','2','3','4','5','6','7','8','9','⌫','0','Add'].forEach(k => {
+  const b = document.createElement('div');
+  b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' ? ' fn go' : '');
+  b.textContent = k;
+  // pointerdown fires instantly for touch + mouse, so rapid taps are never swallowed by the double-tap guard
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (k === '⌫') padValue = padValue.slice(0, -1);
+    else if (k === 'Add') { padSubmit(); return; }
+    else if (padValue.length < 3) padValue += k;
+    padRender();
+  });
+  document.getElementById('pad-keys').appendChild(b);
 });
+tabNQ.addEventListener('click', () => showTab('nq'));
+tabPad.addEventListener('click', () => { if (padMode === 'add') padRender(); showTab('pad'); });
 
 /* ── SELECTED TILE (double-tap to remove) ── */
 let selectedQIdx = -1; // track by queue index, not element ref (DOM rebuilds on render)
