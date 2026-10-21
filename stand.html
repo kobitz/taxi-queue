@@ -785,20 +785,27 @@ function padSubmit(front) {
   mutate(() => { pool.delete(num); front ? queue.unshift(num) : queue.push(num); }, 'added', num);
   padRender();
 }
-['1','2','3','4','5','6','7','8','9','⌫','0','Add','Filler In-Front','Filler','Add In-Front'].forEach(k => {
-  const b = document.createElement('div');
-  b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' || k === 'Add In-Front' ? ' fn go' : k.startsWith('Filler') ? ' fn filler' : '');
-  b.textContent = k;
-  // pointerdown fires instantly for touch + mouse, so rapid taps are never swallowed by the double-tap guard
-  b.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    if (k === '⌫') padValue = padValue.slice(0, -1);
+// If a key press adds a queue row, the pad shifts down — scroll by the same amount so it stays under the finger
+function padKeep(fn) {
+  const before = padPanel.getBoundingClientRect().top;
+  fn();
+  const d = padPanel.getBoundingClientRect().top - before;
+  if (d) window.scrollBy(0, d);
+}
+function padPress(k) {
+  if (k === '⌫') padValue = padValue.slice(0, -1);
     else if (k === 'Add') { padSubmit(false); return; }
     else if (k === 'Add In-Front') { padSubmit(true); return; }
     else if (k === 'Filler' || k === 'Filler In-Front') { const front = k !== 'Filler'; mutate(() => { front ? queue.unshift('dummy') : queue.push('dummy'); }, 'added', 'Filler'); return; }
     else if (padValue.length < 3) padValue += k;
     padRender();
-  });
+}
+['1','2','3','4','5','6','7','8','9','⌫','0','Add','Filler In-Front','Filler','Add In-Front'].forEach(k => {
+  const b = document.createElement('div');
+  b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' || k === 'Add In-Front' ? ' fn go' : k.startsWith('Filler') ? ' fn filler' : '');
+  b.textContent = k;
+  // pointerdown fires instantly for touch + mouse, so rapid taps are never swallowed by the double-tap guard
+  b.addEventListener('pointerdown', e => { e.preventDefault(); padKeep(() => padPress(k)); });
   document.getElementById('pad-keys').appendChild(b);
 });
 tabNQ.addEventListener('click', () => showTab('nq'));
