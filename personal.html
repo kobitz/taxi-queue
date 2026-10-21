@@ -102,7 +102,7 @@
 
   .q-zero     { background: rgba(180,180,180,.15); border: 1.5px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5); box-shadow: none; cursor: pointer; }
   .q-zero.primed        { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
-  .q-zero.clear-armed   { box-shadow: 0 0 0 2px #ff5555; color: #ffd600; }
+  .q-zero.clear-armed   { background: #d32f2f; border-color: #ff8a80; box-shadow: 0 0 0 2px #ff5555; color: #fff; }
   .q-zero.clear-confirm { box-shadow: 0 0 0 2px #ff5555; color: #ff5555; }
   .tile.load-target { box-shadow: 0 0 0 2px #ffd600 !important; filter: brightness(1.2); }
   .q-stand    { background: var(--stand);    box-shadow: 0 4px 14px rgba(21,101,192,.45); }
@@ -363,8 +363,8 @@ function renderQueue() {
         tile.style.lineHeight = '1.2';
         tile.style.padding = '4px';
         if (clearState === 1) {
-          tile.textContent = 'Clear All';
-          tile.style.fontSize = 'calc(var(--tile) * 0.18)';
+          tile.textContent = 'Clear all?';
+          tile.style.fontSize = 'calc(var(--tile) * 0.17)';
           tile.classList.add('clear-armed');
         } else if (clearState === 2) {
           tile.textContent = 'Are you sure?';
@@ -752,12 +752,9 @@ function handleTap(el) {
   const role=el.dataset.role, rawVal=el.dataset.val;
   const val = rawVal === 'filler' ? 'dummy' : parseInt(rawVal);
   if (role==='zero') {
-    if (clearState === 2) {
+    if (clearState === 1) {
       clearSelected();
       mutate(() => { queue.length = 0; });
-    } else if (clearState === 1) {
-      clearState = 2;
-      render();
     } else if (loadedPrimed) {
       clearSelected();
       if (queue.length > 0) {
