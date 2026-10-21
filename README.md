@@ -71,6 +71,13 @@ This section has two tabs: **Not in Queue** (the tile list) and **Dial Pad** (se
 - While replacing, the Filler, Filler In-Front and Add In-Front keys are disabled (they would shift the filler's position)
 - **Cancel** by tapping the Not in Queue tab. Tapping a filler a second time right away still removes it, as before
 
+### Undo
+
+- Tap **↶ Undo** (next to the "Queue" heading) to reverse the last change — add, remove, move, load, filler, replace or Clear All
+- Keeps the last 30 changes per device; the button is greyed out when there is nothing to undo
+- Undo restores the queue as it was on that device, so if someone else edited in the meantime their change is overwritten
+- On `stand.html`, each undo is logged in History as **Undo**
+
 ### Reordering
 
 - **Hold and drag** any queue tile to move it to a new position
@@ -120,6 +127,19 @@ On first load of `index.html` or `personal.html`, you are prompted to enter your
 
 ---
 
+## Install as an App (fullscreen)
+
+Add any page to the home screen so it opens fullscreen, without the browser bar:
+
+- **iPhone (Safari):** open the page → Share → **Add to Home Screen**
+- **Android (Chrome):** menu (⋮) → **Install app** / **Add to Home screen**
+
+Each page installs as its own app (Live, Stand, Personal, History). Icons and manifests live in `icon-*.png`, `apple-touch-icon.png` and `manifest-*.json` — keep them in the repo root.
+
+Note: on iPhone an installed app has its own storage, separate from Safari, so it will ask again for your name / taxi number and remember its own tile-size setting.
+
+---
+
 ## Tile Size
 
 Tap the **Bigger Tiles / Smaller Tiles** button (top right) to toggle between 10 columns and 5 columns. The preference is saved per device per browser.
@@ -147,6 +167,7 @@ Every action on `stand.html` is logged:
 | **Loaded** | Taxi removed via the Loading tile (tap or drag) |
 | **Moved** | Taxi reordered within the queue |
 | **10-11** | Taxi removed via a 10-11 request from the live view |
+| **Undo** | A change was reversed with the Undo button |
 
 Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. History can be cleared with the Clear All button.
 
