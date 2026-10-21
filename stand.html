@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest-stand.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2d1b69">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Stand">
 <title>Taxi Stand Queue</title>
 <style>
   :root {
@@ -111,6 +118,14 @@
     cursor: pointer; line-height: 1; }
   .q-add:hover { background: rgba(128,216,255,.08); border-color: rgba(128,216,255,.6); color: rgba(128,216,255,.8); }
 
+
+  .qhead { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .qhead h2 { margin:0; }
+  #undo-btn { font-size:12px; font-weight:700; letter-spacing:.5px; padding:6px 12px; border-radius:10px; min-height:32px;
+    background:rgba(255,171,64,.15); color:#ffab40; border:1.5px solid rgba(255,171,64,.4); cursor:pointer; }
+  #undo-btn:active { background:rgba(255,171,64,.35); }
+  #undo-btn:disabled { opacity:.3; pointer-events:none; }
+
   /* TABS + DIAL PAD */
   .tabs { display:flex; gap:18px; margin-bottom:8px; }
   .tabs h2 { margin:0; cursor:pointer; padding:6px 0 4px; border-bottom:2px solid transparent; opacity:.4; }
@@ -184,7 +199,7 @@
 <div id="sync-status" class="ok">LIVE</div>
 
 <section>
-  <h2>Queue</h2>
+  <div class="qhead"><h2>Queue</h2><button id="undo-btn" disabled>↶ Undo</button></div>
   <div id="queue-wrapper">
     <div id="row-labels"></div>
     <div id="queue-cols">
@@ -584,11 +599,30 @@ function showReq1011(num) {
 /* ── STATE MUTATORS (all call saveToFirebase) ── */
 function mutate(fn, action, value) {
   cancelReplace();
+  pushUndo(action ? action + (value !== undefined ? ' ' + value : '') : 'change');
   fn();
   if (action && value !== undefined) logChange(action, value);
   saveToFirebase();
   render();
 }
+
+/* ── UNDO ── */
+const undoBtn = document.getElementById('undo-btn');
+const undoStack = [];
+function syncUndoBtn() { undoBtn.disabled = !undoStack.length; }
+function pushUndo(label) {
+  undoStack.push({ q: queue.slice(), label });
+  if (undoStack.length > 30) undoStack.shift();
+  syncUndoBtn();
+}
+function doUndo() {
+  const u = undoStack.pop(); if (!u) return;
+  cancelReplace(); clearSelected();
+  queue = u.q; rebuildPool(queue);
+  logChange('undo', u.label);
+  saveToFirebase(); syncUndoBtn(); render();
+}
+undoBtn.addEventListener('pointerdown', e => { e.preventDefault(); doUndo(); });
 
 /* ── DRAG & DROP ── */
 const HOLD_MS = 350;
@@ -872,6 +906,7 @@ function handleTap(el) {
   if (role==='zero') {
     if (clearState === 1) {
       clearSelected();
+      pushUndo('clear all');
       queue.length = 0;
       rebuildPool(queue);
       saveToFirebase();
