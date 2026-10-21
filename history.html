@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest-history.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2d1b69">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="History">
 <title>Taxi Stand — History</title>
 <style>
   :root {
@@ -64,6 +71,7 @@
   .entry.removed  { border-left: 3px solid #ff5555; }
   .entry.loaded   { border-left: 3px solid #ffd600; }
   .entry.moved    { border-left: 3px solid #6a1b9a; }
+  .entry.undo     { border-left: 3px solid #ffab40; }
   .entry.req1011  { border-left: 3px solid #ffd600; }
 
   .entry-action {
@@ -74,6 +82,7 @@
   .removed .entry-action { background: rgba(255,85,85,.25);  color: #ff8080; }
   .loaded  .entry-action { background: rgba(255,214,0,.25);  color: #ffd600; }
   .moved   .entry-action { background: rgba(106,27,154,.4);  color: #ce93d8; }
+  .undo    .entry-action { background: rgba(255,171,64,.25); color: #ffab40; }
   .req1011 .entry-action { background: rgba(255,214,0,.25);  color: #ffd600; }
 
   .entry-main { display: flex; flex-direction: column; gap: 2px; }
@@ -113,6 +122,7 @@
   <button class="filter-btn" data-filter="removed">Dropped</button>
   <button class="filter-btn" data-filter="loaded">Loaded</button>
   <button class="filter-btn" data-filter="moved">Moved</button>
+  <button class="filter-btn" data-filter="undo">Undone</button>
   <button class="filter-btn" data-filter="req1011">10-11</button>
   <input id="search" type="search" placeholder="Search taxi # or device…">
 </div>
@@ -181,7 +191,7 @@ function renderLog() {
     const el = document.createElement('div');
     el.className = `entry ${entry.action}`;
 
-    const actionLabels = { added: 'Added', removed: 'Dropped', loaded: 'Loaded', moved: 'Moved', req1011: '10-11' };
+    const actionLabels = { added: 'Added', removed: 'Dropped', loaded: 'Loaded', moved: 'Moved', undo: 'Undo', req1011: '10-11' };
     const timeStr = formatTime(entry.ts);
 
     el.innerHTML = `
