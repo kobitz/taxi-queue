@@ -762,6 +762,7 @@ function showTab(which) {
   tabPad.classList.toggle('active', pad); tabNQ.classList.toggle('active', !pad);
   padPanel.style.display = pad ? 'block' : 'none';
   pGrid.style.display = pad ? 'none' : '';
+  if (!pad) document.body.style.minHeight = '';
 }
 function padRender(err) {
   padDisplay.classList.toggle('err', !!err);
@@ -790,7 +791,12 @@ function padKeep(fn) {
   const before = padPanel.getBoundingClientRect().top;
   fn();
   const d = padPanel.getBoundingClientRect().top - before;
-  if (d) window.scrollBy(0, d);
+  if (d > 0) {
+    // Page may be too short to scroll that far yet — add blank space at the bottom so it can
+    const need = window.scrollY + d + window.innerHeight;
+    if (document.documentElement.scrollHeight < need) document.body.style.minHeight = need + 'px';
+    window.scrollBy(0, d);
+  }
 }
 function padPress(k) {
   if (k === '⌫') padValue = padValue.slice(0, -1);
