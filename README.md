@@ -30,7 +30,7 @@ The queue is displayed as a grid of numbered tiles. Each row holds up to 10 posi
 - **Light blue tiles (positions 9+, and all overflow rows)** — general queue
 - **Grey "Filler" tile** — use when a position is unknown. Tap to add to the end of the queue, or drag to a specific position.
 - **Grey "Filler In-Front" tile** — same as Filler but tap adds to the front of the queue instead of the end.
-- **"adjust highest taxi number" tile** — always at the end of Not in Queue. Tap it and type a number to change the highest taxi number shown (minimum 140 on the shared queue, no minimum on personal). The new value syncs to all devices via Firebase.
+- **"adjust highest taxi number" tile** — always at the end of Not in Queue. Tap it to open the Dial Pad and type a number to change the highest taxi number shown (minimum 140 on the shared queue, no minimum on personal). The new value syncs to all devices via Firebase.
 
 Row labels (10, 20, 30…) appear on the left when the queue exceeds one row.
 Column labels (1–9) and group labels (Stand / Holding) appear above the grid.
@@ -39,6 +39,8 @@ Column labels (1–9) and group labels (Stand / Holding) appear above the grid.
 
 Taxis not currently in the queue live here, always sorted numerically (1 to the highest taxi number, default 140). Filler In-Front and Filler tiles are always first.
 
+This section has two tabs: **Not in Queue** (the tile list) and **Dial Pad** (see below).
+
 ---
 
 ## Interactions
@@ -46,7 +48,7 @@ Taxis not currently in the queue live here, always sorted numerically (1 to the 
 ### Adding to the Queue
 
 - **Tap** any tile in the Not in Queue list to add it to the end of the queue
-- **Tap the "+" tile** (the next open slot in the queue grid) to type a taxi number directly via the dialpad — on desktop, press Enter or click away to confirm.
+- **Tap the "+" tile** (the next open slot in the queue grid) to open the **Dial Pad** tab and type a taxi number (see below)
 - **Drag** a tile up into a specific position in the queue
 
 ### Removing from the Queue
@@ -58,10 +60,16 @@ Taxis not currently in the queue live here, always sorted numerically (1 to the 
 
 ### Clearing the Queue
 
-- **Hold the "Loading" tile** (~350ms) to arm it — red border, yellow "Clear All" text
-- **Tap once** → changes to red "Are you sure?"
-- **Tap again** → queue is cleared
-- **Tap anywhere else** at any stage to cancel
+- **Hold the "Loading" tile** (~350ms) — it turns red and reads "Clear all?"
+- **Tap it again** → the entire queue is cleared
+- **Tap anywhere else** to cancel
+
+### Replacing a Filler with a Number
+
+- **Tap a Filler tile** in the queue — the Dial Pad tab opens, the filler gets a yellow ring, and the display reads "REPLACE FILLER"
+- Type a taxi number and press **Replace** — the filler is swapped for that number in the same position (the number must be valid and not already in the queue)
+- While replacing, the Filler, Filler In-Front and Add In-Front keys are disabled (they would shift the filler's position)
+- **Cancel** by tapping the Not in Queue tab. Tapping a filler a second time right away still removes it, as before
 
 ### Reordering
 
@@ -73,6 +81,25 @@ Taxis not currently in the queue live here, always sorted numerically (1 to the 
 
 - A quick swipe scrolls the page normally
 - Holding a tile for ~350ms activates drag mode
+
+---
+
+## Dial Pad
+
+The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the phone's built-in keyboard never pops up.
+
+| Key | Action |
+|-----|--------|
+| **0–9** | Type a taxi number (up to 3 digits) |
+| **⌫** | Backspace |
+| **Add** | Add the typed number to the end of the queue |
+| **Add In-Front** | Add the typed number to the front of the queue |
+| **Filler** / **Filler In-Front** | Add a filler to the end / front of the queue (no number needed) |
+
+- Tapping the **+** tile in the queue opens this tab. The pad stays open after adding so you can enter several numbers in a row
+- Errors (invalid number, already in the queue) show in the pad's display instead of a popup
+- **Auto-scroll:** when a key press or a tap in Not in Queue adds a new queue row, the page scrolls by the same amount so the button stays under your finger and you can keep tapping
+- The same pad is used by the "adjust highest taxi number" tile (display shows "HIGHEST #") and for replacing fillers
 
 ---
 
