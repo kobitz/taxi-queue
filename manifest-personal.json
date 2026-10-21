@@ -1,0 +1,23 @@
+{
+  "name": "Taxi Personal",
+  "short_name": "Personal",
+  "start_url": "./personal.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#2d1b69",
+  "theme_color": "#2d1b69",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
