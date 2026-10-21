@@ -698,10 +698,11 @@ function padSubmit(front) {
   padRender();
 }
 // If a key press adds a queue row, the pad shifts down — scroll by the same amount so it stays under the finger
-function padKeep(fn) {
-  const before = padPanel.getBoundingClientRect().top;
+function padKeep(fn) { keepPlace(padPanel, fn); }
+function keepPlace(el, fn) {
+  const before = el.getBoundingClientRect().top;
   fn();
-  const d = padPanel.getBoundingClientRect().top - before;
+  const d = el.getBoundingClientRect().top - before;
   if (d > 0) {
     // Page may be too short to scroll that far yet — add blank space at the bottom so it can
     const need = window.scrollY + d + window.innerHeight;
@@ -775,11 +776,11 @@ function handleTap(el) {
       render();
     }
   } else if (role==='filler-src') {
-    mutate(() => { queue.push('filler'); }, 'added', 'Filler');
+    keepPlace(pGrid, () => mutate(() => { queue.push('filler'); }, 'added', 'Filler'));
   } else if (role==='filler-front-src') {
-    mutate(() => { queue.unshift('filler'); }, 'added', 'Filler');
+    keepPlace(pGrid, () => mutate(() => { queue.unshift('filler'); }, 'added', 'Filler'));
   } else if (role==='pool') {
-    mutate(() => { pool.delete(val); queue.push(val); }, 'added', val);
+    keepPlace(pGrid, () => mutate(() => { pool.delete(val); queue.push(val); }, 'added', val));
   } else if (role==='queue') {
     const idx=parseInt(el.dataset.qidx);
     if (selectedQIdx === idx) {
