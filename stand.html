@@ -271,7 +271,7 @@
 
 <script type="module">
 import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, set, push } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, set, push, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 /* ── FIREBASE ── */
 const app = initializeApp({
@@ -398,7 +398,8 @@ function saveToFirebase() {
   setSync('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    set(queueRef, queue.length ? queue : null)
+    // one atomic write: the queue plus a server-side 'last updated' time that the live view shows
+    update(ref(db), { queue: queue.length ? queue : null, updatedAt: serverTimestamp() })
       .then(() => setSync('ok'))
       .catch(() => setSync('error'));
   }, 300);
