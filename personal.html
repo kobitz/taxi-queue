@@ -278,7 +278,7 @@ function calcTileSize() {
 }
 calcTileSize();
 // iOS reports the old width at the moment of rotation, so re-measure again shortly after
-function relayout() { calcTileSize(); render(); if (typeof fitPad === 'function' && typeof padPanel !== 'undefined') fitPad(); }
+function relayout() { calcTileSize(); render(); }
 function relayoutSoon() { relayout(); setTimeout(relayout, 120); setTimeout(relayout, 450); }
 window.addEventListener('resize', relayoutSoon);
 window.addEventListener('orientationchange', relayoutSoon);
@@ -785,21 +785,11 @@ function cancelReplace() {
   if (replaceIdx >= 0) { replaceIdx = -1; document.querySelectorAll('.tile.replace-target').forEach(t => t.classList.remove('replace-target')); }
   if (padMode === 'replace') { padMode = 'add'; padValue = ''; padRender(); }
 }
-// On a phone the pad spans the full width, and its keys grow so it reaches the bottom of the screen
-function fitPad() {
-  if (padPanel.style.display !== 'block') return;
-  const root = document.documentElement.style;
-  if (!window.matchMedia('(max-width:600px)').matches) { root.removeProperty('--padkey-h'); root.removeProperty('--paddisp-h'); return; }
-  const avail = window.innerHeight - padPanel.getBoundingClientRect().top - 10;
-  const h = Math.max(58, Math.min(120, Math.floor((avail - 20) / 5.97)));
-  root.setProperty('--padkey-h', h + 'px'); root.setProperty('--paddisp-h', Math.round(h * 0.97) + 'px');
-}
 function showTab(which) {
   const pad = which === 'pad';
   tabPad.classList.toggle('active', pad); tabNQ.classList.toggle('active', !pad);
   padPanel.style.display = pad ? 'block' : 'none';
   pGrid.style.display = pad ? 'none' : '';
-  if (pad) fitPad();
   if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
 }
 function padRender(err) {
