@@ -39,7 +39,7 @@ Column labels (1–9) and group labels (Stand / Holding) appear above the grid.
 
 Taxis not currently in the queue live here, always sorted numerically (1 to the highest taxi number, default 140). Filler In-Front and Filler tiles are always first.
 
-This section has two tabs: **Not in Queue** (the tile list) and **Dial Pad** (see below).
+This section has two tabs: **Dial Pad** (see below) and **Not in Queue** (the tile list). `stand.html` and `personal.html` open on the Dial Pad tab.
 
 ---
 
@@ -61,7 +61,7 @@ This section has two tabs: **Not in Queue** (the tile list) and **Dial Pad** (se
 ### Clearing the Queue
 
 - **Hold the "Loading" tile** (~350ms) — it turns red and reads "Clear all?"
-- **Tap it again** → the entire queue is cleared
+- **Tap it again** → the entire queue is cleared (lifting your finger after the hold does not count as that tap)
 - **Tap anywhere else** to cancel
 
 ### Replacing a Filler with a Number
@@ -93,7 +93,7 @@ This section has two tabs: **Not in Queue** (the tile list) and **Dial Pad** (se
 
 ## Dial Pad
 
-The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the phone's built-in keyboard never pops up.
+The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the phone's built-in keyboard never pops up. On a phone held upright it spans the full width of the screen; the keys are a fixed size.
 
 | Key | Action |
 |-----|--------|
@@ -106,6 +106,7 @@ The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the p
 - Tapping the **+** tile in the queue opens this tab. The pad stays open after adding so you can enter several numbers in a row
 - Errors (invalid number, already in the queue) show in the pad's display instead of a popup
 - **Auto-scroll:** when a key press or a tap in Not in Queue adds a new queue row, the page scrolls by the same amount so the button stays under your finger and you can keep tapping
+- **Physical keyboard** (desktop): while the tab is open, digits type the number, Backspace deletes, **Enter** adds it to the end of the queue (or replaces a filler / saves the highest number), and **Shift+Enter** adds it to the front
 - The same pad is used by the "adjust highest taxi number" tile (display shows "HIGHEST #") and for replacing fillers
 
 ---
@@ -123,7 +124,7 @@ If multiple stand.html instances are open, all of them receive the notification 
 
 ## My Taxi Highlight
 
-On first load of `index.html` or `personal.html`, you are prompted to enter your taxi number. Your tile is highlighted with a green glow in the queue. On `personal.html` it also glows in the Not in Queue list. In the Stand and Holding zones, your tile gets extra brightness on top of the zone color. This number is saved per device per browser.
+On first load of `index.html` or `personal.html`, a **Your taxi number** box appears with its own on-page dial pad (type 1–140, tap **Save**, or **Skip**). Your tile is highlighted in solid light blue (the same color as the bottom-right tile of the app icon) wherever it appears in the queue. On `personal.html` it also highlights in the Not in Queue list. Holding the 10-11 tile on `index.html` before you've set a number opens the same box. The number is saved per device per browser.
 
 ---
 
@@ -142,7 +143,7 @@ Note: on iPhone an installed app has its own storage, separate from Safari, so i
 
 ## Tile Size
 
-Tap the **Bigger Tiles / Smaller Tiles** button (top right) to toggle between 10 columns and 5 columns. The preference is saved per device per browser.
+Tap the **Bigger Tiles / Smaller Tiles** button (top right) to toggle between 10 columns and 5 columns. The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
 
 ---
 
@@ -152,7 +153,7 @@ Powered by [Firebase Realtime Database](https://firebase.google.com/products/rea
 
 A **LIVE / SAVING… / OFFLINE** indicator appears in the top right corner.
 
-The first time you use `stand.html` on a new device, you'll be prompted to enter a device name. This name appears in the change history.
+The first time you make a change on `stand.html` on a new device, a **Your name** box appears with its own on-screen keyboard (letters, numbers, space, `-`, `'`, `.`; up to 20 characters). This name appears in the change history. Changes made before you enter a name are held and logged under it once you tap **Save**; **Skip** logs them as "Unknown" and asks again next time.
 
 ---
 
@@ -175,7 +176,7 @@ Entries show the taxi number, device name, and a relative timestamp. Filter by a
 
 ## Personal Mode (`personal.html`)
 
-Identical to `stand.html` but stores data in the browser's localStorage instead of Firebase. No sync, no history, no device name prompt. Shows **SAVED** instead of LIVE. Prompts for your taxi number (same as `index.html`) to highlight your tile. Useful for personal tracking that doesn't affect the shared queue.
+Identical to `stand.html` but stores data in the browser's localStorage instead of Firebase. No sync, no history, no device name box. Shows **SAVED** instead of LIVE. Asks for your taxi number (same on-page dial pad as `index.html`) to highlight your tile. Useful for personal tracking that doesn't affect the shared queue.
 
 ---
 
