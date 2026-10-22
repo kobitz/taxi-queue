@@ -13,6 +13,10 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
 | `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
 
+`stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = Firebase, shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
+
+**Updating shared files:** the pages load them as `taxi-editor.js?v=1` and `taxi-editor.css?v=1`. After changing either file, bump the `v=` number in both `stand.html` and `personal.html` so phones fetch the new version instead of a cached one.
+
 Hosted at: `https://kobitz.github.io/taxi-queue`
 
 ---
