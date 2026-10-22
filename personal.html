@@ -181,9 +181,12 @@
   .num-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:24px; width:min(90%,320px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
   .num-title { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#80d8ff; margin-bottom:6px; }
   .num-sub { font-size:13px; opacity:.7; margin-bottom:14px; }
-  #num-input { width:100%; font-size:22px; padding:12px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); color:#fff; outline:none; text-align:center;
-    -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
-  #num-input:focus { border-color:#80d8ff; }
+  #num-display { height:56px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; letter-spacing:2px; }
+  #num-keys { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
+  .num-key { height:54px; border-radius:10px; background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22); color:#fff; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .num-key:active { background:rgba(128,216,255,.35); }
+  .num-key.fn { font-size:16px; color:#80d8ff; }
+  .num-key.go { background:#80d8ff; color:#1e1248; border-color:transparent; }
   #num-err { min-height:18px; margin-top:8px; font-size:13px; color:#ff8080; }
   .num-btns { display:flex; gap:10px; margin-top:6px; justify-content:center; }
   .num-btn { padding:11px 26px; border-radius:10px; font-size:14px; font-weight:700; border:none; cursor:pointer; }
@@ -227,10 +230,10 @@
   <div class="num-card">
     <div class="num-title">Your taxi number</div>
     <div class="num-sub">Your tile is highlighted in the queue</div>
-    <input id="num-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" placeholder="Number">
+    <div id="num-display">_</div>
     <div id="num-err"></div>
+    <div id="num-keys"></div>
     <div class="num-btns">
-      <button class="num-btn num-save" id="num-save">Save</button>
       <button class="num-btn num-skip" id="num-skip">Skip</button>
     </div>
   </div>
@@ -315,29 +318,50 @@ function rebuildPool(q) {
 }
 
 
-/* ── TAXI NUMBER BOX (in-page; window.prompt blocks first paint and is unreliable in installed iPhone apps) ── */
+/* ── TAXI NUMBER BOX (in-page dial pad; window.prompt blocks first paint and has no keypad in installed iPhone apps) ── */
 const numModal = document.getElementById('num-modal');
-const numInput = document.getElementById('num-input');
+const numDisplay = document.getElementById('num-display');
 const numErr   = document.getElementById('num-err');
+let numValue = '';
+function numRender() { numDisplay.textContent = numValue || '_'; }
 function showNumberModal() {
-  numInput.value = ''; numErr.textContent = '';
+  numValue = ''; numErr.textContent = ''; numRender();
   numModal.classList.add('visible');
-  setTimeout(() => numInput.focus(), 50);
 }
 function ensureMyNumber() { if (!myNumber) showNumberModal(); }
 function saveMyNumber() {
-  const num = parseInt(numInput.value, 10);
-  if (isNaN(num) || num < 1 || num > MAX_NUM) { numErr.textContent = `Enter a number from 1 to ${MAX_NUM}.`; return; }
+  const num = parseInt(numValue, 10);
+  if (isNaN(num) || num < 1 || num > MAX_NUM) { numValue = ''; numRender(); numErr.textContent = `Enter a number from 1 to ${MAX_NUM}.`; return; }
   myNumber = num;
   localStorage.setItem('taxi-my-number', num);
-  numModal.classList.remove('visible'); numInput.blur();
+  numModal.classList.remove('visible');
   render();
 }
+function numPress(k) {
+  numErr.textContent = '';
+  if (k === '⌫') numValue = numValue.slice(0, -1);
+  else if (k === 'Save') { saveMyNumber(); return; }
+  else if (numValue.length < 3) numValue += k;
+  numRender();
+}
 // pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
-document.getElementById('num-save').addEventListener('pointerdown', e => { e.preventDefault(); saveMyNumber(); });
-document.getElementById('num-skip').addEventListener('pointerdown', e => { e.preventDefault(); numModal.classList.remove('visible'); numInput.blur(); });
-numInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveMyNumber(); });
-numInput.addEventListener('input', () => { numInput.value = numInput.value.replace(/\D/g, ''); numErr.textContent = ''; });
+['1','2','3','4','5','6','7','8','9','⌫','0','Save'].forEach(k => {
+  const b = document.createElement('div');
+  b.className = 'num-key' + (k === '⌫' ? ' fn' : k === 'Save' ? ' fn go' : '');
+  b.textContent = k;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); numPress(k); });
+  document.getElementById('num-keys').appendChild(b);
+});
+document.getElementById('num-skip').addEventListener('pointerdown', e => { e.preventDefault(); numModal.classList.remove('visible'); });
+// physical keyboard (desktop)
+document.addEventListener('keydown', e => {
+  if (!numModal.classList.contains('visible') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^[0-9]$/.test(e.key)) numPress(e.key);
+  else if (e.key === 'Backspace') numPress('⌫');
+  else if (e.key === 'Enter') numPress('Save');
+  else return;
+  e.preventDefault();
+});
 
 setTimeout(ensureMyNumber, 0); // after first paint
 
