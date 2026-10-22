@@ -216,7 +216,7 @@
 <div class="divider"></div>
 
 <section>
-  <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2><h2 id="tab-pad">Dial Pad</h2></div>
+  <div class="tabs"><h2 id="tab-pad">Dial Pad</h2><h2 id="tab-nq" class="active">Not in Queue</h2></div>
   <div id="pool-grid"></div>
   <div id="pad-panel">
     <div id="pad-display">_</div>
@@ -1094,6 +1094,8 @@ document.addEventListener('touchend', e => {
   lastTap = now;
 }, { passive: false });
 
+// Open on the Dial Pad tab
+showTab('pad');
 </script>
 </body>
 </html>
