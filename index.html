@@ -111,6 +111,21 @@
   }
   #zoom-btn:hover { background: rgba(128,216,255,.28); }
   #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
+
+  /* taxi-number modal — uses the phone's numeric keypad */
+  #num-modal { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
+  #num-modal.visible { display:flex; }
+  .num-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:24px; width:min(90%,320px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
+  .num-title { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#80d8ff; margin-bottom:6px; }
+  .num-sub { font-size:13px; opacity:.7; margin-bottom:14px; }
+  #num-input { width:100%; font-size:22px; padding:12px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); color:#fff; outline:none; text-align:center;
+    -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+  #num-input:focus { border-color:#80d8ff; }
+  #num-err { min-height:18px; margin-top:8px; font-size:13px; color:#ff8080; }
+  .num-btns { display:flex; gap:10px; margin-top:6px; justify-content:center; }
+  .num-btn { padding:11px 26px; border-radius:10px; font-size:14px; font-weight:700; border:none; cursor:pointer; }
+  .num-save { background:#80d8ff; color:#1e1248; }
+  .num-skip { background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.2); }
 </style>
 </head>
 <body>
@@ -131,6 +146,19 @@
   </div>
 </section>
 
+
+<div id="num-modal">
+  <div class="num-card">
+    <div class="num-title">Your taxi number</div>
+    <div class="num-sub">Your tile is highlighted in the queue</div>
+    <input id="num-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" placeholder="Number">
+    <div id="num-err"></div>
+    <div class="num-btns">
+      <button class="num-btn num-save" id="num-save">Save</button>
+      <button class="num-btn num-skip" id="num-skip">Skip</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -190,21 +218,34 @@ let reqHold  = null;
 const HOLD_MS = 350;
 let lastTouchTime = 0;
 
-function ensureMyNumber() {
-  if (myNumber) return;
-  const raw = prompt(`Enter your taxi number (1–${MAX_NUM}):`, '');
-  if (!raw) return;
-  const num = parseInt(raw);
-  if (isNaN(num) || num < 1 || num > MAX_NUM) {
-    alert(`"${raw}" is not a valid taxi number (1–${MAX_NUM}).`);
-    return;
-  }
-  myNumber = num;
-  localStorage.setItem('taxi-my-number', num);
-}
 
 // Ask on first load
-ensureMyNumber();
+
+/* ── TAXI NUMBER BOX (in-page; window.prompt blocks first paint and is unreliable in installed iPhone apps) ── */
+const numModal = document.getElementById('num-modal');
+const numInput = document.getElementById('num-input');
+const numErr   = document.getElementById('num-err');
+function showNumberModal() {
+  numInput.value = ''; numErr.textContent = '';
+  numModal.classList.add('visible');
+  setTimeout(() => numInput.focus(), 50);
+}
+function ensureMyNumber() { if (!myNumber) showNumberModal(); }
+function saveMyNumber() {
+  const num = parseInt(numInput.value, 10);
+  if (isNaN(num) || num < 1 || num > MAX_NUM) { numErr.textContent = `Enter a number from 1 to ${MAX_NUM}.`; return; }
+  myNumber = num;
+  localStorage.setItem('taxi-my-number', num);
+  numModal.classList.remove('visible'); numInput.blur();
+  render();
+}
+// pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
+document.getElementById('num-save').addEventListener('pointerdown', e => { e.preventDefault(); saveMyNumber(); });
+document.getElementById('num-skip').addEventListener('pointerdown', e => { e.preventDefault(); numModal.classList.remove('visible'); numInput.blur(); });
+numInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveMyNumber(); });
+numInput.addEventListener('input', () => { numInput.value = numInput.value.replace(/\D/g, ''); numErr.textContent = ''; });
+
+setTimeout(ensureMyNumber, 0); // after first paint
 
 /* ── LIVE LISTENER (read only) ── */
 onValue(queueRef, snapshot => {
@@ -313,7 +354,7 @@ function renderQueue() {
         }
         const fireHold = () => {
           reqHold = null;
-          if (!myNumber) { alert('Set your taxi number first.'); return; }
+          if (!myNumber) { showNumberModal(); return; }
           if (!queue.includes(myNumber)) { alert('Your number is not currently in the queue.'); return; }
           reqState = 1;
           render();
