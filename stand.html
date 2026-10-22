@@ -176,12 +176,18 @@
   /* name modal — uses the phone's normal keyboard */
   #name-modal { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
   #name-modal.visible { display:flex; }
-  .name-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:24px; width:min(90%,320px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
+  .name-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:18px 14px; width:min(96%,380px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
   .name-title { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#80d8ff; margin-bottom:6px; }
   .name-sub { font-size:13px; opacity:.7; margin-bottom:14px; }
-  #name-input { width:100%; font-size:18px; padding:12px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); color:#fff; outline:none; text-align:center;
-    -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
-  #name-input:focus { border-color:#80d8ff; }
+  #name-display { min-height:52px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; padding:0 10px; word-break:break-all; }
+  #name-display.empty { font-size:15px; font-weight:400; opacity:.5; }
+  #name-keys { margin-top:10px; display:flex; flex-direction:column; gap:5px; }
+  .nk-row { display:flex; gap:4px; justify-content:center; }
+  .nk { flex:1 1 0; max-width:36px; height:42px; border-radius:7px; background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22); color:#fff; font-size:17px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .nk:active { background:rgba(128,216,255,.35); }
+  .nk.wide { max-width:56px; flex:1.5 1 0; font-size:14px; color:#80d8ff; }
+  .nk.space { max-width:none; flex:6 1 0; font-size:13px; color:#80d8ff; }
+  .nk.on { background:#80d8ff; color:#1e1248; }
   .name-btns { display:flex; gap:10px; margin-top:14px; justify-content:center; }
   .name-btn { padding:11px 26px; border-radius:10px; font-size:14px; font-weight:700; border:none; cursor:pointer; }
   .name-save { background:#80d8ff; color:#1e1248; }
@@ -240,7 +246,8 @@
   <div class="name-card">
     <div class="name-title">Your name</div>
     <div class="name-sub">Shown next to your changes in History</div>
-    <input id="name-input" type="text" maxlength="30" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Tap here to type your name">
+    <div id="name-display" class="empty">Type your name</div>
+    <div id="name-keys"></div>
     <div class="name-btns">
       <button class="name-btn name-save" id="name-save">Save</button>
       <button class="name-btn name-skip" id="name-skip">Skip</button>
@@ -297,32 +304,72 @@ function getOSType() {
 
 let userName = localStorage.getItem('taxi-device-name') || '';
 
-/* In-page name box (window.prompt is unreliable in installed iPhone apps). History entries made
-   before a name is entered are held and sent once it is. */
+/* In-page name box with its own on-screen keyboard (window.prompt and the iPhone keyboard were both unreliable
+   in the installed app). History entries made before a name is entered are held and sent once it is. */
 const nameModal = document.getElementById('name-modal');
-const nameInput = document.getElementById('name-input');
+const nameDisplay = document.getElementById('name-display');
 let pendingLogs = [];
+let nameValue = '', nameShift = true;   // shift starts on so the first letter is capitalised
+const NAME_MAX = 20;
+function nameRender() {
+  nameDisplay.textContent = nameValue || 'Type your name';
+  nameDisplay.classList.toggle('empty', !nameValue);
+  document.querySelectorAll('#name-keys .nk').forEach(k => {
+    if (k.dataset.k === 'shift') k.classList.toggle('on', nameShift);
+    else if (/^[a-z]$/i.test(k.dataset.k)) k.textContent = nameShift ? k.dataset.k.toUpperCase() : k.dataset.k.toLowerCase();
+  });
+}
 function showNameModal() {
   if (nameModal.classList.contains('visible')) return;
-  nameInput.value = '';
+  nameValue = ''; nameShift = true; nameRender();
   nameModal.classList.add('visible');
-  // No programmatic focus: on iPhone that marks the field focused without raising the keyboard, and a later
-  // tap on an already-focused field then does nothing. The user's own tap on the field opens the keyboard.
 }
 function finishName(skip) {
-  userName = skip ? 'Unknown' : (nameInput.value.trim() || 'Unknown');
+  userName = skip ? 'Unknown' : (nameValue.trim() || 'Unknown');
   if (!skip && userName !== 'Unknown') localStorage.setItem('taxi-device-name', userName);
   nameModal.classList.remove('visible');
-  nameInput.blur();
   const logs = pendingLogs; pendingLogs = [];
   logs.forEach(l => push(historyRef, { action: l.action, value: l.value, device: getFullDeviceLabel(), ts: l.ts }));
 }
-// pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
+function namePress(k) {
+  if (k === 'shift') { nameShift = !nameShift; nameRender(); return; }
+  if (k === 'back') { nameValue = nameValue.slice(0, -1); if (!nameValue) nameShift = true; }
+  else if (nameValue.length < NAME_MAX) {
+    const ch = k === 'space' ? ' ' : (/^[a-z]$/i.test(k) ? (nameShift ? k.toUpperCase() : k.toLowerCase()) : k);
+    nameValue += ch;
+    nameShift = (ch === ' ' || ch === '-');   // capitalise after a space or hyphen, otherwise lower case
+  }
+  nameRender();
+}
+[['1','2','3','4','5','6','7','8','9','0'],
+ ['q','w','e','r','t','y','u','i','o','p'],
+ ['a','s','d','f','g','h','j','k','l'],
+ ['shift','z','x','c','v','b','n','m','back'],
+ ['-',"'",'space','.']].forEach(row => {
+  const r = document.createElement('div'); r.className = 'nk-row';
+  row.forEach(k => {
+    const b = document.createElement('div');
+    b.dataset.k = k;
+    b.className = 'nk' + (k === 'shift' || k === 'back' ? ' wide' : k === 'space' ? ' space' : '');
+    b.textContent = k === 'shift' ? '⇧' : k === 'back' ? '⌫' : k === 'space' ? 'space' : k;
+    // pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
+    b.addEventListener('pointerdown', e => { e.preventDefault(); namePress(k); });
+    r.appendChild(b);
+  });
+  document.getElementById('name-keys').appendChild(r);
+});
 document.getElementById('name-save').addEventListener('pointerdown', e => { e.preventDefault(); finishName(false); });
 document.getElementById('name-skip').addEventListener('pointerdown', e => { e.preventDefault(); finishName(true); });
-nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') finishName(false); });
-// Focus from inside the user's own tap so the keyboard reliably opens
-nameInput.addEventListener('touchend', () => { nameInput.focus(); });
+// physical keyboard (desktop)
+document.addEventListener('keydown', e => {
+  if (!nameModal.classList.contains('visible') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter') finishName(false);
+  else if (e.key === 'Backspace') namePress('back');
+  else if (e.key === ' ') namePress('space');
+  else if (e.key.length === 1 && /[a-z0-9'.\-]/i.test(e.key)) namePress(e.key);
+  else return;
+  e.preventDefault();
+});
 
 function getFullDeviceLabel() {
   return `${userName} — ${getOSType()}`;
@@ -934,7 +981,7 @@ function padPress(k) {
 });
 // Physical keyboard: digits, Backspace, Enter = Add (Replace), Shift+Enter = Add In-Front
 document.addEventListener('keydown', e => {
-  if (padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (nameModal.classList.contains('visible') || padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest && e.target.closest('input, textarea')) return;
   let k = null;
   if (/^[0-9]$/.test(e.key)) k = e.key;
