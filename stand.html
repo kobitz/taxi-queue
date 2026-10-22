@@ -173,6 +173,20 @@
   #zoom-btn:hover { background: rgba(128,216,255,.28); }
   #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
 
+  /* name modal — uses the phone's normal keyboard */
+  #name-modal { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
+  #name-modal.visible { display:flex; }
+  .name-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:24px; width:min(90%,320px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
+  .name-title { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#80d8ff; margin-bottom:6px; }
+  .name-sub { font-size:13px; opacity:.7; margin-bottom:14px; }
+  #name-input { width:100%; font-size:18px; padding:12px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); color:#fff; outline:none; text-align:center;
+    -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+  #name-input:focus { border-color:#80d8ff; }
+  .name-btns { display:flex; gap:10px; margin-top:14px; justify-content:center; }
+  .name-btn { padding:11px 26px; border-radius:10px; font-size:14px; font-weight:700; border:none; cursor:pointer; }
+  .name-save { background:#80d8ff; color:#1e1248; }
+  .name-skip { background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.2); }
+
   /* 10-11 modal */
   #req1011-modal {
     display: none; position: fixed; inset: 0; z-index: 200;
@@ -221,6 +235,18 @@
   </div>
 
 </section>
+
+<div id="name-modal">
+  <div class="name-card">
+    <div class="name-title">Your name</div>
+    <div class="name-sub">Shown next to your changes in History</div>
+    <input id="name-input" type="text" maxlength="30" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Name">
+    <div class="name-btns">
+      <button class="name-btn name-save" id="name-save">Save</button>
+      <button class="name-btn name-skip" id="name-skip">Skip</button>
+    </div>
+  </div>
+</div>
 
 <div id="req1011-modal">
   <div class="req1011-card">
@@ -271,11 +297,29 @@ function getOSType() {
 
 let userName = localStorage.getItem('taxi-device-name') || '';
 
-function ensureDeviceName() {
-  if (userName) return;
-  userName = prompt('Enter your name (shown in history):', '') || 'Unknown';
-  localStorage.setItem('taxi-device-name', userName);
+/* In-page name box (window.prompt is unreliable in installed iPhone apps). History entries made
+   before a name is entered are held and sent once it is. */
+const nameModal = document.getElementById('name-modal');
+const nameInput = document.getElementById('name-input');
+let pendingLogs = [];
+function showNameModal() {
+  if (nameModal.classList.contains('visible')) return;
+  nameInput.value = '';
+  nameModal.classList.add('visible');
+  setTimeout(() => nameInput.focus(), 50);
 }
+function finishName(skip) {
+  userName = skip ? 'Unknown' : (nameInput.value.trim() || 'Unknown');
+  if (!skip && userName !== 'Unknown') localStorage.setItem('taxi-device-name', userName);
+  nameModal.classList.remove('visible');
+  nameInput.blur();
+  const logs = pendingLogs; pendingLogs = [];
+  logs.forEach(l => push(historyRef, { action: l.action, value: l.value, device: getFullDeviceLabel(), ts: l.ts }));
+}
+// pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
+document.getElementById('name-save').addEventListener('pointerdown', e => { e.preventDefault(); finishName(false); });
+document.getElementById('name-skip').addEventListener('pointerdown', e => { e.preventDefault(); finishName(true); });
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') finishName(false); });
 
 function getFullDeviceLabel() {
   return `${userName} — ${getOSType()}`;
@@ -284,7 +328,11 @@ function getFullDeviceLabel() {
 /* ── LOG CHANGE ── */
 function logChange(action, value) {
   if (value === 'Filler') return;
-  ensureDeviceName();
+  if (!userName) {
+    pendingLogs.push({ action, value: String(value), ts: Date.now() });
+    showNameModal();
+    return;
+  }
   push(historyRef, {
     action,
     value: String(value),
