@@ -234,7 +234,7 @@
 <div class="divider"></div>
 
 <section>
-  <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2><h2 id="tab-pad">Dial Pad</h2></div>
+  <div class="tabs"><h2 id="tab-pad">Dial Pad</h2><h2 id="tab-nq" class="active">Not in Queue</h2></div>
   <div id="pool-grid"></div>
   <div id="pad-panel">
     <div id="pad-display">_</div>
@@ -452,12 +452,14 @@ function rebuildPool(q) {
   for (const v of q) if (typeof v === 'number') pool.delete(v);
 }
 
+let padFittedOnce = false;
 /* ── LISTEN for remote changes ── */
 onValue(queueRef, snapshot => {
   const data = snapshot.val();
   queue = Array.isArray(data) ? data : (data ? Object.values(data) : []);
   rebuildPool(queue);
   render();
+  if (!padFittedOnce) { padFittedOnce = true; fitPad(); }   // size the pad once the real queue height is known
 });
 
 onValue(maxRef, snapshot => {
@@ -1222,6 +1224,8 @@ document.addEventListener('touchend', e => {
   lastTap = now;
 }, { passive: false });
 
+// Open on the Dial Pad tab
+showTab('pad');
 </script>
 </body>
 </html>
