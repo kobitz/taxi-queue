@@ -785,6 +785,18 @@ function padPress(k) {
   b.addEventListener('pointerdown', e => { e.preventDefault(); padKeep(() => padPress(k)); });
   document.getElementById('pad-keys').appendChild(b);
 });
+// Physical keyboard: digits, Backspace, Enter = Add (Replace), Shift+Enter = Add In-Front
+document.addEventListener('keydown', e => {
+  if (padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  let k = null;
+  if (/^[0-9]$/.test(e.key)) k = e.key;
+  else if (e.key === 'Backspace') k = '⌫';
+  else if (e.key === 'Enter') k = e.shiftKey ? 'Add In-Front' : 'Add';
+  if (!k) return;
+  e.preventDefault();
+  padKeep(() => padPress(k));
+});
 tabNQ.addEventListener('click', () => showTab('nq'));
 tabPad.addEventListener('click', () => { if (padMode === 'add') padRender(); showTab('pad'); });
 
