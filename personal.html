@@ -241,11 +241,16 @@ function calcTileSize() {
   const pad = 10*2;
   const labelW = 30;
   const gaps = (COLS-1)*4;
-  const size = Math.floor((window.innerWidth - pad - labelW - gaps) / COLS);
+  const size = Math.floor((document.documentElement.clientWidth - pad - labelW - gaps) / COLS);
   document.documentElement.style.setProperty('--tile', size + 'px');
 }
 calcTileSize();
-window.addEventListener('resize', () => { calcTileSize(); render(); });
+// iOS reports the old width at the moment of rotation, so re-measure again shortly after
+function relayout() { calcTileSize(); render(); }
+function relayoutSoon() { relayout(); setTimeout(relayout, 120); setTimeout(relayout, 450); }
+window.addEventListener('resize', relayoutSoon);
+window.addEventListener('orientationchange', relayoutSoon);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', relayoutSoon);
 
 const zoomBtn = document.getElementById('zoom-btn');
 // Sync button label to saved state on load
