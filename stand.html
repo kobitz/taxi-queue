@@ -240,7 +240,7 @@
   <div class="name-card">
     <div class="name-title">Your name</div>
     <div class="name-sub">Shown next to your changes in History</div>
-    <input id="name-input" type="text" maxlength="30" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Name">
+    <input id="name-input" type="text" maxlength="30" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Tap here to type your name">
     <div class="name-btns">
       <button class="name-btn name-save" id="name-save">Save</button>
       <button class="name-btn name-skip" id="name-skip">Skip</button>
@@ -306,7 +306,8 @@ function showNameModal() {
   if (nameModal.classList.contains('visible')) return;
   nameInput.value = '';
   nameModal.classList.add('visible');
-  setTimeout(() => nameInput.focus(), 50);
+  // No programmatic focus: on iPhone that marks the field focused without raising the keyboard, and a later
+  // tap on an already-focused field then does nothing. The user's own tap on the field opens the keyboard.
 }
 function finishName(skip) {
   userName = skip ? 'Unknown' : (nameInput.value.trim() || 'Unknown');
@@ -320,6 +321,8 @@ function finishName(skip) {
 document.getElementById('name-save').addEventListener('pointerdown', e => { e.preventDefault(); finishName(false); });
 document.getElementById('name-skip').addEventListener('pointerdown', e => { e.preventDefault(); finishName(true); });
 nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') finishName(false); });
+// Focus from inside the user's own tap so the keyboard reliably opens
+nameInput.addEventListener('touchend', () => { nameInput.focus(); });
 
 function getFullDeviceLabel() {
   return `${userName} — ${getOSType()}`;
@@ -1157,7 +1160,7 @@ document.addEventListener('touchmove', e => {
 let lastTap = 0;
 document.addEventListener('touchend', e => {
   const now = Date.now();
-  if (now - lastTap < 300) e.preventDefault();
+  if (now - lastTap < 300 && !(e.target.closest && e.target.closest('input'))) e.preventDefault();
   lastTap = now;
 }, { passive: false });
 
