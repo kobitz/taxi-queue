@@ -338,6 +338,7 @@ let queue = [];
 let pool  = new Set();
 for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
 let loadedPrimed = false;
+let clearGuardUntil = 0; // blocks taps on 'Clear all?' until the finger that armed it has been released
 let clearState = 0; // 0=normal, 1=clear-armed, 2=confirm
 
 /* Rebuild pool from queue */
@@ -464,7 +465,8 @@ function renderQueue() {
         tile.dataset.role = 'zero';
 
         let zeroHold = null;
-        const fireHold = () => { zeroHold = null; clearSelected(); clearState = 1; render(); };
+        const fireHold = () => { zeroHold = null; clearSelected(); clearState = 1; clearGuardUntil = Infinity; render(); };
+        const releaseGuard = () => { lastTouchTime = Date.now(); if (clearGuardUntil === Infinity) clearGuardUntil = Date.now() + 600; };
         tile.addEventListener('touchstart', () => {
           lastTouchTime = Date.now();
           zeroHold = setTimeout(fireHold, HOLD_MS);
@@ -472,8 +474,10 @@ function renderQueue() {
         tile.addEventListener('touchmove', () => {
           if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; }
         }, { passive: true });
+        tile.addEventListener('touchcancel', releaseGuard);
         tile.addEventListener('touchend', e => {
           e.preventDefault();
+          releaseGuard();
           if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; handleTap(tile); }
         });
         tile.addEventListener('mousedown', e => {
@@ -482,6 +486,7 @@ function renderQueue() {
           zeroHold = setTimeout(fireHold, HOLD_MS);
           const onMove = () => { if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; } };
           const onUp = () => {
+            releaseGuard();
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
             if (zeroHold) { clearTimeout(zeroHold); zeroHold = null; handleTap(tile); }
@@ -881,6 +886,7 @@ function clearSelected() {
   selectedQIdx = -1;
   loadedPrimed = false;
   clearState = 0;
+  clearGuardUntil = 0;
   qGrid.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
   qGrid.querySelectorAll('.tile.load-target').forEach(t => t.classList.remove('load-target'));
   const zeroTile = document.querySelector('.tile[data-role="zero"]');
@@ -905,6 +911,7 @@ function handleTap(el) {
   const val = rawVal === 'dummy' ? 'dummy' : parseInt(rawVal);
   if (role==='zero') {
     if (clearState === 1) {
+      if (Date.now() < clearGuardUntil) return; // still the same press that armed it
       clearSelected();
       pushUndo('clear all');
       queue.length = 0;
