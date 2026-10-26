@@ -12,6 +12,8 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `stand.html` | `/stand.html` | **Editable queue** — add, remove, reorder taxis; syncs to all devices |
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
 | `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
+| `taxi-auth.js` / `taxi-config.js` | — | Dispatcher sign-in and Firebase settings |
+| `database.rules.json` | — | Database security rules (copy into Firebase console) |
 
 `stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = Firebase, shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
 
@@ -174,7 +176,7 @@ Every action on `stand.html` is logged:
 | **10-11** | Taxi removed via a 10-11 request from the live view |
 | **Undo** | A change was reversed with the Undo button |
 
-Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. History can be cleared with the Clear All button.
+Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. Anyone with the link can view it. Clear All needs a dispatcher sign-in and a second tap to confirm.
 
 ---
 
@@ -191,15 +193,26 @@ The app uses Firebase Realtime Database at:
 https://taxi-queue-3e591-default-rtdb.firebaseio.com
 ```
 
-Database rules (set in the Firebase console under Realtime Database → Rules):
-```json
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
-```
+See **Security** below for the database rules.
+
+---
+
+## Security
+
+- Everyone can **read** the queue and history (drivers use `index.html` with no login).
+- Only signed-in **dispatchers** can change the queue, highest number, or history. Drivers can still send 10-11 requests.
+- Rules live in `database.rules.json` (documentation copy; the live copy is pasted into the Firebase console → Realtime Database → Rules).
+- Login code: `taxi-auth.js`; project settings: `taxi-config.js`. Until a real API key is in `taxi-config.js`, login is off and the pages behave as before.
+
+### Setup (once)
+1. Firebase console → **Authentication** → Get started → enable **Email/Password**. Also turn off any "allow users to sign up" option if shown.
+2. Authentication → Users → **Add user** for each dispatcher. Copy each user's **UID**.
+3. Realtime Database → Data: add `dispatchers` → `<UID>` = `true` for each dispatcher.
+4. Project settings → General → Your apps → web app → copy `apiKey` into `taxi-config.js`, upload it, wait ~30 s, and confirm you can sign in on `stand.html`.
+5. **Last:** paste `database.rules.json` into Rules and Publish. (Doing this before step 4 locks the stand out.)
+6. Optional: Google Cloud console → Credentials → restrict the browser key to `https://kobitz.github.io/*`.
+
+To remove a dispatcher: delete their `dispatchers/<UID>` entry (and the user).
 
 ---
 

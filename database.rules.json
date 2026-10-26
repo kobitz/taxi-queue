@@ -1,0 +1,39 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "queue": {
+      ".read": true,
+      ".write": "root.child('dispatchers').child(auth.uid).exists()",
+      "$i": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 999 || newData.val() == 'dummy'" }
+    },
+    "maxNum": {
+      ".read": true,
+      ".write": "root.child('dispatchers').child(auth.uid).exists()",
+      ".validate": "newData.isNumber() && newData.val() >= 140 && newData.val() <= 999"
+    },
+    "updatedAt": {
+      ".read": true,
+      ".write": "root.child('dispatchers').child(auth.uid).exists()"
+    },
+    "history": {
+      ".read": true,
+      ".write": "root.child('dispatchers').child(auth.uid).exists()",
+      "$id": {
+        ".validate": "newData.hasChildren(['action','value','device','ts'])",
+        "action": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "value":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "device": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "ts":     { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "request1011": {
+      ".read": true,
+      ".write": true,
+      ".validate": "newData.val() == null || (newData.hasChildren(['number','ts']) && newData.child('number').isNumber() && newData.child('number').val() >= 1 && newData.child('number').val() <= 999 && newData.child('ts').isNumber())"
+    },
+    "dispatchers": { ".read": false, ".write": false }
+  }
+}

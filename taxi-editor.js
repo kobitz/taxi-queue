@@ -5,25 +5,36 @@ const STORAGE_KEY = 'taxi-queue-personal';
 
 /* ── FIREBASE (stand only; personal never touches the network) ── */
 let fb = {}, db = null, queueRef = null, historyRef = null, maxRef = null, request1011Ref = null;
+let auth = { enabled: false, user: () => null, label: () => '', requireSignIn: async () => null, signOut: async () => {}, onChange() {} };
 if (!PERSONAL) {
-  const [{ initializeApp }, dbm] = await Promise.all([
+  const [{ initializeApp }, dbm, { FIREBASE_CONFIG }, { setupAuth }] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'),
+    import('./taxi-config.js'),
+    import('./taxi-auth.js?v=2'),
   ]);
   fb = dbm;
-  const app = initializeApp({
-    apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
-    databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com"
-  });
+  const app = initializeApp(FIREBASE_CONFIG);
   db             = fb.getDatabase(app);
   queueRef       = fb.ref(db, 'queue');
   historyRef     = fb.ref(db, 'history');
   maxRef         = fb.ref(db, 'maxNum');
   request1011Ref = fb.ref(db, 'request1011');
+  auth = await setupAuth(app, { autoPrompt: true });   // dispatcher sign-in (does nothing until taxi-config.js has a real key)
 }
 
 const syncEl = document.getElementById('sync-status');
+let signOutArmed = false;
+syncEl.addEventListener('pointerdown', e => {
+  if (PERSONAL || !auth.enabled) return;
+  e.preventDefault();
+  if (!auth.user()) { auth.requireSignIn(); return; }
+  if (!signOutArmed) { signOutArmed = true; syncEl.textContent = 'SIGN OUT?'; setTimeout(() => { signOutArmed = false; setSync('ok'); }, 3000); return; }
+  signOutArmed = false; auth.signOut();
+});
+if (!PERSONAL) { auth.onChange(() => setSync('ok')); setSync('ok'); }
 function setSync(state) {
+  if (!PERSONAL && auth.enabled && !auth.user()) { syncEl.className = 'error'; syncEl.textContent = 'SIGN IN'; return; }
   syncEl.className = state;
   syncEl.textContent = state === 'ok' ? (PERSONAL ? 'SAVED' : 'LIVE') : state === 'saving' ? 'SAVING…' : (PERSONAL ? 'ERROR' : 'OFFLINE');
 }
@@ -41,95 +52,23 @@ function getOSType() {
   return 'Unknown';
 }
 
-let userName = localStorage.getItem('taxi-device-name') || '';
-
-/* In-page name box with its own on-screen keyboard (window.prompt and the iPhone keyboard were both unreliable
-   in the installed app). History entries made before a name is entered are held and sent once it is. */
-const nameModal = document.getElementById('name-modal');
-const nameDisplay = document.getElementById('name-display');
-let pendingLogs = [];
-let nameValue = '', nameShift = true;   // shift starts on so the first letter is capitalised
-const NAME_MAX = 20;
-function nameRender() {
-  nameDisplay.textContent = nameValue || 'Type your name';
-  nameDisplay.classList.toggle('empty', !nameValue);
-  document.querySelectorAll('#name-keys .nk').forEach(k => {
-    if (k.dataset.k === 'shift') k.classList.toggle('on', nameShift);
-    else if (/^[a-z]$/i.test(k.dataset.k)) k.textContent = nameShift ? k.dataset.k.toUpperCase() : k.dataset.k.toLowerCase();
-  });
-}
-function showNameModal() {
-  if (nameModal.classList.contains('visible')) return;
-  nameValue = ''; nameShift = true; nameRender();
-  nameModal.classList.add('visible');
-}
-function finishName(skip) {
-  userName = skip ? 'Unknown' : (nameValue.trim() || 'Unknown');
-  if (!skip && userName !== 'Unknown') localStorage.setItem('taxi-device-name', userName);
-  nameModal.classList.remove('visible');
-  const logs = pendingLogs; pendingLogs = [];
-  logs.forEach(l => fb.push(historyRef, { action: l.action, value: l.value, device: getFullDeviceLabel(), ts: l.ts }));
-}
-function namePress(k) {
-  if (k === 'shift') { nameShift = !nameShift; nameRender(); return; }
-  if (k === 'back') { nameValue = nameValue.slice(0, -1); if (!nameValue) nameShift = true; }
-  else if (nameValue.length < NAME_MAX) {
-    const ch = k === 'space' ? ' ' : (/^[a-z]$/i.test(k) ? (nameShift ? k.toUpperCase() : k.toLowerCase()) : k);
-    nameValue += ch;
-    nameShift = (ch === ' ' || ch === '-');   // capitalise after a space or hyphen, otherwise lower case
-  }
-  nameRender();
-}
-if (nameModal) {   // only stand.html has the name box
-  [['1','2','3','4','5','6','7','8','9','0'],
-   ['q','w','e','r','t','y','u','i','o','p'],
-   ['a','s','d','f','g','h','j','k','l'],
-   ['shift','z','x','c','v','b','n','m','back'],
-   ['-',"'",'space','.']].forEach(row => {
-    const r = document.createElement('div'); r.className = 'nk-row';
-    row.forEach(k => {
-      const b = document.createElement('div');
-      b.dataset.k = k;
-      b.className = 'nk' + (k === 'shift' || k === 'back' ? ' wide' : k === 'space' ? ' space' : '');
-      b.textContent = k === 'shift' ? '⇧' : k === 'back' ? '⌫' : k === 'space' ? 'space' : k;
-      // pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
-      b.addEventListener('pointerdown', e => { e.preventDefault(); namePress(k); });
-      r.appendChild(b);
-    });
-    document.getElementById('name-keys').appendChild(r);
-  });
-  document.getElementById('name-save').addEventListener('pointerdown', e => { e.preventDefault(); finishName(false); });
-  document.getElementById('name-skip').addEventListener('pointerdown', e => { e.preventDefault(); finishName(true); });
-  // physical keyboard (desktop)
-  document.addEventListener('keydown', e => {
-    if (!nameModal.classList.contains('visible') || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === 'Enter') finishName(false);
-    else if (e.key === 'Backspace') namePress('back');
-    else if (e.key === ' ') namePress('space');
-    else if (e.key.length === 1 && /[a-z0-9'.\-]/i.test(e.key)) namePress(e.key);
-    else return;
-    e.preventDefault();
-  });
-}
-
 function getFullDeviceLabel() {
-  return `${userName} — ${getOSType()}`;
+  return `${auth.label() || 'Unknown'} — ${getOSType()}`;
 }
 
 /* ── LOG CHANGE ── */
 function logChange(action, value) {
   if (PERSONAL || value === 'Filler') return;
-  if (!userName) {
-    pendingLogs.push({ action, value: String(value), ts: Date.now() });
-    showNameModal();
-    return;
-  }
   fb.push(historyRef, {
     action,
     value: String(value),
     device: getFullDeviceLabel(),
     ts: Date.now()
-  });
+  }).catch(onWriteError);
+}
+function onWriteError(e) {
+  setSync('error');
+  if (auth.enabled && e && /permission/i.test(e.code + ' ' + e.message)) auth.requireSignIn();
 }
 
 /* Debounce saves so rapid drags don't spam Firebase */
@@ -145,7 +84,7 @@ function saveToFirebase() {
     // one atomic write: the queue plus a server-side 'last updated' time that the live view shows
     fb.update(fb.ref(db), { queue: queue.length ? queue : null, updatedAt: fb.serverTimestamp() })
       .then(() => setSync('ok'))
-      .catch(() => setSync('error'));
+      .catch(onWriteError);
   }, 300);
 }
 
@@ -790,7 +729,7 @@ function padPress(k) {
 });
 // Physical keyboard: digits, Backspace, Enter = Add (Replace), Shift+Enter = Add In-Front
 document.addEventListener('keydown', e => {
-  if (document.querySelector('#name-modal.visible, #num-modal.visible') || padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (document.querySelector('#auth-modal.visible, #num-modal.visible') || padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest && e.target.closest('input, textarea')) return;
   let k = null;
   if (/^[0-9]$/.test(e.key)) k = e.key;

@@ -161,25 +161,7 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 #zoom-btn:hover { background: rgba(128,216,255,.28); }
 #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
 
-/* name modal — uses the phone's normal keyboard */
-#name-modal { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
-#name-modal.visible { display:flex; }
-.name-card { background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:16px; padding:18px 14px; width:min(96%,380px); text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.6); }
-.name-title { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#80d8ff; margin-bottom:6px; }
-.name-sub { font-size:13px; opacity:.7; margin-bottom:14px; }
-#name-display { min-height:52px; border-radius:10px; border:1.5px solid rgba(128,216,255,.4); background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; padding:0 10px; word-break:break-all; }
-#name-display.empty { font-size:15px; font-weight:400; opacity:.5; }
-#name-keys { margin-top:10px; display:flex; flex-direction:column; gap:5px; }
-.nk-row { display:flex; gap:4px; justify-content:center; }
-.nk { flex:1 1 0; max-width:36px; height:42px; border-radius:7px; background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22); color:#fff; font-size:17px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.nk:active { background:rgba(128,216,255,.35); }
-.nk.wide { max-width:56px; flex:1.5 1 0; font-size:14px; color:#80d8ff; }
-.nk.space { max-width:none; flex:6 1 0; font-size:13px; color:#80d8ff; }
-.nk.on { background:#80d8ff; color:#1e1248; }
-.name-btns { display:flex; gap:10px; margin-top:14px; justify-content:center; }
-.name-btn { padding:11px 26px; border-radius:10px; font-size:14px; font-weight:700; border:none; cursor:pointer; }
-.name-save { background:#80d8ff; color:#1e1248; }
-.name-skip { background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.2); }
+#sync-status{cursor:pointer}
 
 /* 10-11 modal */
 #req1011-modal {

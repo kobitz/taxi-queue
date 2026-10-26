@@ -134,10 +134,11 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-const app = initializeApp({
-  apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
-  databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com"
-});
+import { FIREBASE_CONFIG } from './taxi-config.js';
+import { setupAuth } from './taxi-auth.js?v=2';
+
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = await setupAuth(app);   // viewing needs no sign-in; only Clear All does
 const db = getDatabase(app);
 const historyRef = ref(db, 'history');
 const syncEl = document.getElementById('sync-status');
@@ -162,6 +163,7 @@ onValue(historyRef, snapshot => {
 });
 
 /* ── RENDER ── */
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function renderLog() {
   const logEl = document.getElementById('log');
   const emptyEl = document.getElementById('empty-state');
@@ -189,16 +191,16 @@ function renderLog() {
 
   entries.forEach(entry => {
     const el = document.createElement('div');
-    el.className = `entry ${entry.action}`;
+    el.className = 'entry ' + String(entry.action).replace(/[^a-z0-9]/gi, '');
 
     const actionLabels = { added: 'Added', removed: 'Dropped', loaded: 'Loaded', moved: 'Moved', undo: 'Undo', req1011: '10-11' };
     const timeStr = formatTime(entry.ts);
 
     el.innerHTML = `
-      <div class="entry-action">${actionLabels[entry.action] || entry.action}</div>
+      <div class="entry-action">${esc(actionLabels[entry.action] || entry.action)}</div>
       <div class="entry-main">
-        <div class="entry-value">${entry.value}</div>
-        <div class="entry-device">${entry.device || 'Unknown'}</div>
+        <div class="entry-value">${esc(entry.value)}</div>
+        <div class="entry-device">${esc(entry.device || 'Unknown')}</div>
       </div>
       <div class="entry-time">${timeStr}</div>
     `;
@@ -238,10 +240,17 @@ document.getElementById('search').addEventListener('input', e => {
 });
 
 /* ── CLEAR ── */
-document.getElementById('clear-btn').addEventListener('click', () => {
-  if (confirm('Clear all history? This cannot be undone.')) {
-    remove(historyRef);
+const clearBtn = document.getElementById('clear-btn');
+let clearArmed = false, clearTimer = null;
+function resetClear() { clearArmed = false; clearBtn.textContent = 'Clear All'; }
+clearBtn.addEventListener('click', async () => {
+  if (auth.enabled && !auth.user()) { await auth.requireSignIn(); return; }   // dispatchers only
+  if (!clearArmed) {                       // two taps instead of confirm(), which is unreliable in the installed app
+    clearArmed = true; clearBtn.textContent = 'Tap again to clear';
+    clearTimer = setTimeout(resetClear, 3000); return;
   }
+  clearTimeout(clearTimer); resetClear();
+  remove(historyRef).catch(() => { clearBtn.textContent = 'Not allowed'; setTimeout(resetClear, 2000); });
 });
 </script>
 </body>
