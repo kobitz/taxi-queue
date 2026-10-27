@@ -14,7 +14,7 @@ const AUTH_URL = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 export const AUTH_CONFIGURED = !String(FIREBASE_CONFIG.apiKey || '').startsWith('PASTE');
 
 const CSS = `
-#auth-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(10,5,30,.92);align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-user-select:none;user-select:none}
+#auth-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(10,5,30,.92);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-user-select:none;user-select:none}
 #auth-modal.visible{display:flex}
 .auth-card{background:#1e1248;border:1.5px solid rgba(128,216,255,.45);border-radius:16px;padding:16px 12px;width:min(98%,400px);margin:max(10px,env(safe-area-inset-top)) auto 10px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.6);color:#fff;font-family:'Segoe UI',system-ui,sans-serif}
 .auth-title{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80d8ff;margin-bottom:10px}
@@ -34,6 +34,10 @@ const CSS = `
 .auth-k.on{background:#80d8ff;color:#1e1248}
 .auth-go{margin-top:12px;width:100%;padding:13px;border-radius:10px;border:none;background:#80d8ff;color:#1e1248;font-size:15px;font-weight:800;cursor:pointer}
 .auth-go:disabled{opacity:.5}
+.auth-links{display:flex;gap:10px}
+.auth-link{flex:1;display:block;padding:13px 8px;border-radius:10px;border:1.5px solid rgba(128,216,255,.45);background:rgba(128,216,255,.12);color:#80d8ff;font-size:14px;font-weight:700;text-decoration:none;text-align:center}
+.auth-link:active{background:rgba(128,216,255,.35)}
+.auth-card.links{margin-top:0;padding:14px 12px}
 `;
 const LAYERS = {
   abc: [['1','2','3','4','5','6','7','8','9','0'],['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],
@@ -62,7 +66,9 @@ function buildUi(onSubmit) {
     <div class="auth-field" data-f="pw"><span class="lbl">Password</span><span class="val empty">tap, then type</span><span class="auth-show">Show</span></div>
     <div class="auth-msg" id="auth-msg"></div>
     <div class="auth-keys" id="auth-keys"></div>
-    <button class="auth-go" id="auth-go">Sign in</button></div>`;
+    <button class="auth-go" id="auth-go">Sign in</button></div>
+    <div class="auth-card links"><div class="auth-title">Or just look</div>
+      <div class="auth-links"><a class="auth-link" href="index.html">View queue</a><a class="auth-link" href="personal.html">Personal queue</a></div></div>`;
   document.body.appendChild(modal);
   const vals = { email: localStorage.getItem('taxi-auth-email') || '', pw: '' };
   let active = vals.email ? 'pw' : 'email', layer = 'abc', shift = false, showPw = false, busy = false;
@@ -115,6 +121,8 @@ function buildUi(onSubmit) {
     if (e.target.closest('.auth-show')) { showPw = !showPw; } else { active = f; }
     draw();
   });
+  // the page's double-tap guard can swallow a click, so navigate on pointerdown as well
+  modal.querySelectorAll('.auth-link').forEach(a => a.addEventListener('pointerdown', e => { e.preventDefault(); location.href = a.getAttribute('href'); }));
   go.addEventListener('pointerdown', e => { e.preventDefault(); submit(); });
   document.addEventListener('keydown', e => {            // physical keyboard (desktop)
     if (!modal.classList.contains('visible') || e.ctrlKey || e.metaKey || e.altKey) return;
