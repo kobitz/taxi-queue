@@ -168,7 +168,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, set, goOffline, goOnline } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
@@ -305,6 +305,18 @@ onValue(ref(db, '.info/serverTimeOffset'), s => { serverOffset = s.val() || 0; r
 onValue(ref(db, 'updatedAt'), s => { updatedAt = s.val(); renderUpdated(); });
 onValue(ref(db, '.info/connected'), s => { connected = !!s.val(); setConn(); renderUpdated(); });
 setInterval(renderUpdated, 15000);
+
+/* Free Firebase allows 100 open connections at once. Drop ours while the app is in the background
+   (after 20 s, so quick app switches don't reconnect) and reconnect when it is opened again. */
+let idleTimer = null, offlineByUs = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    idleTimer = setTimeout(() => { offlineByUs = true; goOffline(db); }, 20000);
+  } else {
+    clearTimeout(idleTimer);
+    if (offlineByUs) { offlineByUs = false; goOnline(db); }
+  }
+});
 
 onValue(maxRef, snapshot => {
   const val = snapshot.val();
