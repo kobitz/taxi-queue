@@ -26,15 +26,7 @@ if (!PERSONAL) {
 }
 
 const syncEl = document.getElementById('sync-status');
-let signOutArmed = false;
-syncEl.addEventListener('pointerdown', e => {
-  if (PERSONAL || !auth.enabled) return;
-  e.preventDefault();
-  if (!auth.user()) { auth.requireSignIn(); return; }
-  if (!signOutArmed) { signOutArmed = true; syncEl.textContent = 'SIGN OUT?'; setTimeout(() => { signOutArmed = false; setSync('ok'); }, 3000); return; }
-  signOutArmed = false; auth.signOut();
-});
-if (!PERSONAL) { auth.onChange(() => setSync('ok')); setSync('ok'); }
+if (!PERSONAL) { auth.onChange(() => { setSync('ok'); showLogout(); }); setSync('ok'); }
 function setSync(state) {
   if (!PERSONAL && auth.enabled && !auth.user()) { syncEl.className = 'error'; syncEl.textContent = 'SIGN IN'; return; }
   syncEl.className = state;
@@ -120,7 +112,43 @@ zoomBtn.addEventListener('click', () => {
   zoomBtn.classList.toggle('active', COLS === 5);
   calcTileSize();
   render();
+  closeMenu();
 });
+
+/* ── SETTINGS MENU (gear, top right) ── */
+const menuBtn = document.getElementById('menu-btn'), menuEl = document.getElementById('menu');
+const clearBtn = document.getElementById('clear-btn'), logoutBtn = document.getElementById('logout-btn');
+let clearMenuTimer = null;
+function resetClearBtn() { clearTimeout(clearMenuTimer); clearBtn.classList.remove('armed'); clearBtn.textContent = 'Clear all'; }
+function closeMenu() { menuEl.classList.remove('open'); menuBtn.classList.remove('open'); resetClearBtn(); }
+menuBtn.addEventListener('click', () => {
+  const open = menuEl.classList.toggle('open');
+  menuBtn.classList.toggle('open', open);
+  if (!open) resetClearBtn();
+});
+// tap anywhere else to close
+document.addEventListener('pointerdown', e => {
+  if (menuEl.classList.contains('open') && !e.target.closest('#menu') && !e.target.closest('#menu-btn')) closeMenu();
+}, true);
+clearBtn.addEventListener('click', () => {
+  if (!clearBtn.classList.contains('armed')) {
+    clearBtn.classList.add('armed'); clearBtn.textContent = 'Tap again to clear all';
+    clearMenuTimer = setTimeout(resetClearBtn, 3000);
+    return;
+  }
+  closeMenu();
+  if (!queue.length) return;
+  clearSelected();
+  pushUndo('clear all');
+  queue.length = 0;
+  rebuildPool(queue);
+  saveToFirebase();
+  render();
+});
+logoutBtn.addEventListener('click', () => { closeMenu(); auth.signOut(); });
+function showLogout() { logoutBtn.classList.toggle('shown', !PERSONAL && auth.enabled && !!auth.user()); }
+showLogout();
+
 
 /* ── STATE ── */
 let MAX_NUM = parseInt(localStorage.getItem('taxi-max-num') || '140');
