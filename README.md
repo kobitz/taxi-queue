@@ -156,7 +156,7 @@ Note: on iPhone an installed app has its own storage, separate from Safari, so i
 
 ## Gear Menu (`stand.html`, `personal.html`)
 
-The gear in the top right holds **Bigger/Smaller Tiles**, **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. Tap anywhere else to close it.
+The gear in the top right holds **Bigger/Smaller Tiles**, **Light Mode / Dark Mode** (remembered on that device), **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. Tap anywhere else to close it.
 
 ## Tile Size
 
