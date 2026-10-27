@@ -151,11 +151,11 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 #menu-btn {
   position: fixed; top: 6px; right: 6px; width: 44px; height: 44px; padding: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(128,216,255,.15); color: #80d8ff;
-  border: 1.5px solid rgba(128,216,255,.3); border-radius: 12px;
+  background: none; color: #80d8ff; border: none; border-radius: 12px;
   cursor: pointer; z-index: 160;
 }
-#menu-btn.open { background: rgba(128,216,255,.3); color: #fff; }
+#menu-btn svg { width: 26px; height: 26px; }
+#menu-btn.open { color: #fff; }
 #menu {
   display: none; position: fixed; top: 56px; right: 6px; min-width: 190px; z-index: 160;
   background: #1e1248; border: 1.5px solid rgba(128,216,255,.45); border-radius: 12px;
