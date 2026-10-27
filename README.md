@@ -154,13 +154,13 @@ Note: on iPhone an installed app has its own storage, separate from Safari, so i
 
 ---
 
-## Gear Menu (`stand.html`, `personal.html`)
+## Gear Menu
 
-The gear in the top right holds **Bigger/Smaller Tiles**, **Light Mode / Dark Mode** (remembered on that device), **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. Tap anywhere else to close it.
+The gear in the top right holds **Bigger/Smaller Tiles**, **Light Mode / Dark Mode** (remembered on that device), **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. `index.html` has the gear too, with just tile size and light/dark mode. Tap anywhere else to close it. In light mode the iPhone status bar switches to the light style too; in the installed app that may only update after you close and reopen it.
 
 ## Tile Size
 
-Open the **gear menu** (top right) and tap **Bigger Tiles / Smaller Tiles** to toggle between 10 columns and 5 columns (on `index.html` this is still a button in the top right). The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
+Open the **gear menu** (top right) and tap **Bigger Tiles / Smaller Tiles** to toggle between 10 columns and 5 columns . The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
 
 ---
 
