@@ -34,7 +34,7 @@
   h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--highlight); margin-bottom: 8px; opacity: 0.75; }
 
   #sync-status {
-    position: fixed; top: 16px; right: 130px;
+    position: fixed; top: 16px; right: 60px;
     font-size: 10px; font-weight: 700; letter-spacing: 1px;
     padding: 3px 8px; border-radius: 20px;
     opacity: 0.85; pointer-events: none; z-index: 100;
@@ -101,18 +101,36 @@
   .q-zero.req-armed   { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
   .q-zero.req-confirm { box-shadow: 0 0 0 2px #ff5555; color: #ff5555; }
 
-  #zoom-btn {
-    position: fixed; top: 6px; right: 6px;
-    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
-    padding: 10px 14px; border-radius: 12px; min-width: 44px; min-height: 44px;
-    background: rgba(128,216,255,.15); color: #80d8ff;
-    border: 1.5px solid rgba(128,216,255,.3);
-    cursor: pointer; z-index: 100;
-    transition: background .2s;
-    line-height: 1;
-  }
-  #zoom-btn:hover { background: rgba(128,216,255,.28); }
-  #zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
+  /* settings menu (gear) */
+  #menu-btn { position:fixed; top:6px; right:6px; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center;
+    background:none; color:#80d8ff; border:none; border-radius:12px; cursor:pointer; z-index:160; }
+  #menu-btn svg { width:26px; height:26px; }
+  #menu-btn.open { color:#fff; }
+  #menu { display:none; position:fixed; top:56px; right:6px; min-width:190px; z-index:160; background:#1e1248; border:1.5px solid rgba(128,216,255,.45); border-radius:12px; padding:6px; box-shadow:0 10px 30px rgba(0,0,0,.6); }
+  #menu.open { display:block; }
+  .menu-item { display:block; width:100%; min-height:44px; padding:10px 14px; text-align:left; background:none; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  .menu-item:active { background:rgba(128,216,255,.25); }
+
+  /* light mode (gear menu → Light Mode; the number box stays dark) */
+  html.light { --bg:#f1f4fb; --highlight:#1565c0; --overflow:rgba(21,101,192,.12); --empty:rgba(20,30,80,.06); }
+  html.light body { color:#1a1a3a; }
+  html.light .row-label { color:rgba(21,101,192,.8); }
+  html.light .col-header { color:rgba(21,101,192,.75); }
+  html.light .grp-stand   { background:rgba(21,101,192,.18); color:#0d47a1; }
+  html.light .grp-holding { background:rgba(106,27,154,.16); color:#6a1b9a; }
+  html.light .q-overflow { border-color:rgba(21,101,192,.3); color:#1a1a3a; }
+  html.light .q-empty { border-color:rgba(20,30,80,.18); }
+  html.light .q-zero { background:rgba(20,30,80,.08); border-color:rgba(20,30,80,.22); color:rgba(20,30,80,.6); }
+  html.light .q-stand, html.light .q-hold { color:#fff; }
+  html.light .tile[style*="180, 180, 180"] { background:rgba(20,30,80,.07) !important; border-color:rgba(20,30,80,.22) !important; color:rgba(20,30,80,.65) !important; }
+  html.light #sync-status.ok { background:rgba(0,150,80,.18); color:#0b7a3e; }
+  html.light #sync-status.error { background:rgba(220,50,50,.15); color:#c62828; }
+  html.light #updated.stale { color:#c25e00; }
+  html.light #menu-btn { color:#1565c0; }
+  html.light #menu-btn.open { color:#0d47a1; }
+  html.light #menu { background:#fff; border-color:rgba(21,101,192,.45); box-shadow:0 10px 30px rgba(20,30,80,.25); }
+  html.light .menu-item { color:#1a1a3a; }
+  html.light .menu-item:active { background:rgba(21,101,192,.15); }
 
   /* taxi-number modal — uses the phone's numeric keypad */
   #num-modal { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
@@ -133,10 +151,15 @@
   .num-save { background:#80d8ff; color:#1e1248; }
   .num-skip { background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.2); }
 </style>
+<script>try{if(localStorage.getItem('taxi-theme')==='light'){document.documentElement.classList.add('light');document.querySelector('meta[name="theme-color"]').content='#f1f4fb';document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content='default'}}catch(e){}</script>
 </head>
 <body>
 
-<button id="zoom-btn">Bigger Tiles</button>
+<button id="menu-btn" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+<div id="menu">
+  <button id="zoom-btn" class="menu-item">Bigger Tiles</button>
+  <button id="theme-btn" class="menu-item">Light Mode</button>
+</div>
 
 <div id="sync-status" class="ok">LIVE</div>
 
@@ -215,6 +238,28 @@ zoomBtn.addEventListener('click', () => {
   zoomBtn.classList.toggle('active', COLS === 5);
   calcTileSize();
   render();
+  closeMenu();
+});
+
+/* ── SETTINGS MENU (gear, top right) ── */
+const menuBtn = document.getElementById('menu-btn'), menuEl = document.getElementById('menu'), themeBtn = document.getElementById('theme-btn');
+function closeMenu() { menuEl.classList.remove('open'); menuBtn.classList.remove('open'); }
+menuBtn.addEventListener('click', () => { menuBtn.classList.toggle('open', menuEl.classList.toggle('open')); });
+document.addEventListener('pointerdown', e => {
+  if (menuEl.classList.contains('open') && !e.target.closest('#menu') && !e.target.closest('#menu-btn')) closeMenu();
+}, true);
+function applyTheme(light) {
+  document.documentElement.classList.toggle('light', light);
+  themeBtn.textContent = light ? 'Dark Mode' : 'Light Mode';
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? '#f1f4fb' : '#2d1b69';
+  const sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (sb) sb.content = light ? 'default' : 'black';
+}
+applyTheme(document.documentElement.classList.contains('light'));
+themeBtn.addEventListener('click', () => {
+  const light = !document.documentElement.classList.contains('light');
+  applyTheme(light);
+  try { localStorage.setItem('taxi-theme', light ? 'light' : 'dark'); } catch (e) {}
+  closeMenu();
 });
 
 /* ── MY NUMBER ── */
