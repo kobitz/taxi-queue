@@ -1,5 +1,7 @@
 /* Shared editor for stand.html (Firebase, shared queue) and personal.html (this browser only).
    The page sets window.TAXI_MODE before loading this file. */
+import { tick, alertBeep } from './taxi-sound.js?v=1';
+
 const PERSONAL = window.TAXI_MODE === 'personal';
 const STORAGE_KEY = 'taxi-queue-personal';
 
@@ -11,7 +13,7 @@ if (!PERSONAL) {
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'),
     import('./taxi-config.js'),
-    import('./taxi-auth.js?v=3'),
+    import('./taxi-auth.js?v=4'),
   ]);
   fb = dbm;
   const app = initializeApp(FIREBASE_CONFIG);
@@ -177,7 +179,7 @@ if (PERSONAL) {
   const numDisplay = document.getElementById('num-display');
   const numErr   = document.getElementById('num-err');
   let numValue = '';
-  function numRender() { numDisplay.textContent = numValue || '_'; }
+  function numRender() { numDisplay.innerHTML = numValue + '<span class="caret"></span>'; }
   function showNumberModal() {
     numValue = ''; numErr.textContent = ''; numRender();
     numModal.classList.add('visible');
@@ -203,7 +205,7 @@ if (PERSONAL) {
     const b = document.createElement('div');
     b.className = 'num-key' + (k === '⌫' ? ' fn' : k === 'Save' ? ' fn go' : '');
     b.textContent = k;
-    b.addEventListener('pointerdown', e => { e.preventDefault(); numPress(k); });
+    b.addEventListener('pointerdown', e => { e.preventDefault(); tick(); numPress(k); });
     document.getElementById('num-keys').appendChild(b);
   });
   document.getElementById('num-skip').addEventListener('pointerdown', e => { e.preventDefault(); numModal.classList.remove('visible'); });
@@ -428,6 +430,7 @@ function renderPool() {
 }
 
 /* ── 10-11 REQUEST MODAL ── */
+let alertTimer = null;
 function showReq1011(num) {
   const modal  = document.getElementById('req1011-modal');
   const msgEl  = document.getElementById('req1011-msg');
@@ -435,8 +438,11 @@ function showReq1011(num) {
   const undoBtn = document.getElementById('req1011-undo');
   msgEl.textContent = `#${num} has requested a 10-11`;
   modal.classList.add('visible');
+  // sound + buzz now, and again every 5 s until the dispatcher answers
+  clearInterval(alertTimer); alertBeep(); alertTimer = setInterval(alertBeep, 5000);
 
   const cleanup = () => {
+    clearInterval(alertTimer);
     modal.classList.remove('visible');
     fb.set(request1011Ref, null);
     okBtn.onclick = null;
@@ -663,6 +669,7 @@ function showTab(which) {
   pGrid.style.display = pad ? 'none' : '';
   if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
 }
+function escapeHtml(t) { return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function padRender(err) {
   const rep = padMode === 'replace';
   if (padKeyEls['Add']) {
@@ -671,7 +678,7 @@ function padRender(err) {
   }
   padDisplay.classList.toggle('err', !!err);
   if (err) { padDisplay.textContent = err; return; }
-  padDisplay.innerHTML = (padValue || '_') + (padMode === 'max' ? '<small>HIGHEST #</small>' : rep ? '<small>REPLACE FILLER</small>' : '');
+  padDisplay.innerHTML = escapeHtml(padValue) + '<span class="caret"></span>' + (padMode === 'max' ? '<small>HIGHEST #</small>' : rep ? '<small>REPLACE FILLER</small>' : '');
 }
 function openDialpad() { cancelReplace(); padMode = 'add'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
 function openMaxDialpad() { cancelReplace(); padMode = 'max'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
@@ -724,9 +731,10 @@ function padPress(k) {
   b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' || k === 'Add In-Front' ? ' fn go' : k.startsWith('Filler') ? ' fn filler' : '');
   b.textContent = k; padKeyEls[k] = b;
   // pointerdown fires instantly for touch + mouse, so rapid taps are never swallowed by the double-tap guard
-  b.addEventListener('pointerdown', e => { e.preventDefault(); padKeep(() => padPress(k)); });
+  b.addEventListener('pointerdown', e => { e.preventDefault(); tick(); padKeep(() => padPress(k)); });
   document.getElementById('pad-keys').appendChild(b);
 });
+padRender();   // show the blinking cursor before anything is typed
 // Physical keyboard: digits, Backspace, Enter = Add (Replace), Shift+Enter = Add In-Front
 document.addEventListener('keydown', e => {
   if (document.querySelector('#auth-modal.visible, #num-modal.visible') || padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -958,6 +966,18 @@ document.addEventListener('touchend', e => {
   if (now - lastTap < 300 && !(e.target.closest && e.target.closest('input'))) e.preventDefault();
   lastTap = now;
 }, { passive: false });
+
+/* ── KEEP THE SCREEN AWAKE (stand only; best effort, not every phone supports it) ── */
+if (!PERSONAL && 'wakeLock' in navigator) {
+  let lock = null;
+  const keepAwake = async () => {
+    if (lock || document.hidden) return;
+    try { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } catch (e) { lock = null; }
+  };
+  keepAwake();
+  document.addEventListener('visibilitychange', keepAwake);
+  document.addEventListener('pointerdown', keepAwake);   // some phones only allow it after a touch
+}
 
 if (PERSONAL) render();   // stand renders when Firebase answers
 
