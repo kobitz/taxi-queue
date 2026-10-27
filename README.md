@@ -13,6 +13,7 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
 | `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
 | `taxi-auth.js` / `taxi-config.js` | — | Dispatcher sign-in and Firebase settings |
+| `taxi-sound.js` | — | Key click and 10-11 alert sounds |
 | `database.rules.json` | — | Database security rules (copy into Firebase console) |
 
 `stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = Firebase, shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
@@ -110,6 +111,8 @@ The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the p
 | **Filler** / **Filler In-Front** | Add a filler to the end / front of the queue (no number needed) |
 
 - Tapping the **+** tile in the queue opens this tab. The pad stays open after adding so you can enter several numbers in a row
+- Keys make a soft click, and a blinking cursor shows where typing goes. (The phone's own keyboard click can't be triggered from a web page, so this is a similar sound made by the app.)
+- `stand.html` asks the phone to keep the screen on while the page is open (not every phone supports this)
 - Errors (invalid number, already in the queue) show in the pad's display instead of a popup
 - **Auto-scroll:** when a key press or a tap in Not in Queue adds a new queue row, the page scrolls by the same amount so the button stays under your finger and you can keep tapping
 - **Physical keyboard** (desktop): while the tab is open, digits type the number, Backspace deletes, **Enter** adds it to the end of the queue (or replaces a filler / saves the highest number), and **Shift+Enter** adds it to the front
@@ -125,6 +128,8 @@ When a driver holds the "10-11" tile in the live view, a modal appears on `stand
 - **Undo** — dismisses the request, leaving the taxi in queue
 
 If multiple stand.html instances are open, all of them receive the notification simultaneously.
+
+The stand also **beeps and vibrates** (where the phone allows it) when a request arrives, and repeats every 5 seconds until someone taps OK or Undo. Browsers only allow sound after the page has been touched once, and an iPhone's silent switch mutes it.
 
 ---
 
@@ -157,7 +162,7 @@ Tap the **Bigger Tiles / Smaller Tiles** button (top right) to toggle between 10
 
 Powered by [Firebase Realtime Database](https://firebase.google.com/products/realtime-database). Any change made in `stand.html` appears on all open instances within milliseconds.
 
-A **LIVE / SAVING… / OFFLINE** indicator appears in the top right corner.
+A **LIVE / SAVING… / OFFLINE** indicator appears in the top right corner. `index.html` closes its connection after 20 seconds in the background and reconnects when reopened, to stay under Firebase's free limit of 100 simultaneous connections.
 
 The first time you make a change on `stand.html` on a new device, a **Your name** box appears with its own on-screen keyboard (letters, numbers, space, `-`, `'`, `.`; up to 20 characters). This name appears in the change history. Changes made before you enter a name are held and logged under it once you tap **Save**; **Skip** logs them as "Unknown" and asks again next time.
 
