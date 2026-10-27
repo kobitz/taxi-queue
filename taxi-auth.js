@@ -9,6 +9,7 @@
    auth.signOut()
    auth.onChange(fn)    called with the user (or null) whenever sign-in state changes            */
 import { FIREBASE_CONFIG } from './taxi-config.js';
+import { tick } from './taxi-sound.js?v=1';
 
 const AUTH_URL = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 export const AUTH_CONFIGURED = !String(FIREBASE_CONFIG.apiKey || '').startsWith('PASTE');
@@ -34,6 +35,8 @@ const CSS = `
 .auth-k.on{background:#80d8ff;color:#1e1248}
 .auth-go{margin-top:12px;width:100%;padding:13px;border-radius:10px;border:none;background:#80d8ff;color:#1e1248;font-size:15px;font-weight:800;cursor:pointer}
 .auth-go:disabled{opacity:.5}
+.caret{display:inline-block;width:2px;height:1em;margin-left:1px;vertical-align:-.12em;background:#80d8ff;animation:caretblink 1s steps(1) infinite}
+@keyframes caretblink{0%,55%{opacity:1}56%,100%{opacity:0}}
 .auth-links{display:flex;gap:10px}
 .auth-link{flex:1;display:block;padding:13px 8px;border-radius:10px;border:1.5px solid rgba(128,216,255,.45);background:rgba(128,216,255,.12);color:#80d8ff;font-size:14px;font-weight:700;text-decoration:none;text-align:center}
 .auth-link:active{background:rgba(128,216,255,.35)}
@@ -78,8 +81,12 @@ function buildUi(onSubmit) {
   function draw() {
     for (const f of ['email', 'pw']) {
       const v = fields[f].querySelector('.val'), t = f === 'pw' && !showPw ? '•'.repeat(vals.pw.length) : vals[f];
-      v.textContent = t || 'tap, then type'; v.classList.toggle('empty', !t);
-      fields[f].classList.toggle('active', active === f);
+      const isActive = active === f;
+      v.textContent = '';
+      if (t) v.append(t); else if (!isActive) v.append('tap, then type');
+      if (isActive) { const c = document.createElement('span'); c.className = 'caret'; v.append(c); }
+      v.classList.toggle('empty', !t && !isActive);
+      fields[f].classList.toggle('active', isActive);
     }
     fields.pw.querySelector('.auth-show').textContent = showPw ? 'Hide' : 'Show';
     keysEl.innerHTML = '';
@@ -90,7 +97,7 @@ function buildUi(onSubmit) {
         b.className = 'auth-k' + (['shift','back','sym','abc'].includes(k) ? ' wide' : k === 'space' ? ' space' : '') + (k === 'shift' && shift ? ' on' : '');
         b.textContent = LABEL[k] || (shift && /^[a-z]$/.test(k) ? k.toUpperCase() : k);
         // pointerdown, not click: the page's double-tap-zoom guard can swallow a click that follows a recent tap
-        b.addEventListener('pointerdown', e => { e.preventDefault(); press(k); });
+        b.addEventListener('pointerdown', e => { e.preventDefault(); tick(); press(k); });
         r.appendChild(b);
       });
       keysEl.appendChild(r);
