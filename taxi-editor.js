@@ -146,6 +146,18 @@ clearBtn.addEventListener('click', () => {
   render();
 });
 logoutBtn.addEventListener('click', () => { closeMenu(); auth.signOut(); });
+const themeBtn = document.getElementById('theme-btn');
+function applyTheme(light) {
+  document.documentElement.classList.toggle('light', light);
+  themeBtn.textContent = light ? 'Dark Mode' : 'Light Mode';
+}
+applyTheme(document.documentElement.classList.contains('light'));   // the page's <head> script already set it, so there's no flash
+themeBtn.addEventListener('click', () => {
+  const light = !document.documentElement.classList.contains('light');
+  applyTheme(light);
+  try { localStorage.setItem('taxi-theme', light ? 'light' : 'dark'); } catch (e) {}
+  closeMenu();
+});
 function showLogout() { logoutBtn.classList.toggle('shown', !PERSONAL && auth.enabled && !!auth.user()); }
 showLogout();
 
