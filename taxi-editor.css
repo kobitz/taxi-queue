@@ -24,7 +24,7 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 
 /* sync indicator */
 #sync-status {
-  position: fixed; top: 16px; right: 130px;
+  position: fixed; top: 16px; right: 60px;
   font-size: 10px; font-weight: 700; letter-spacing: 1px;
   padding: 3px 8px; border-radius: 20px;
   opacity: 0.85; transition: background .3s, opacity .3s;
@@ -148,20 +148,30 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   opacity: .92; box-shadow: 0 10px 30px rgba(0,0,0,.65);
 }
 
-#zoom-btn {
-  position: fixed; top: 6px; right: 6px;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
-  padding: 10px 14px; border-radius: 12px; min-width: 44px; min-height: 44px;
+#menu-btn {
+  position: fixed; top: 6px; right: 6px; width: 44px; height: 44px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
   background: rgba(128,216,255,.15); color: #80d8ff;
-  border: 1.5px solid rgba(128,216,255,.3);
-  cursor: pointer; z-index: 100;
-  transition: background .2s;
-  line-height: 1;
+  border: 1.5px solid rgba(128,216,255,.3); border-radius: 12px;
+  cursor: pointer; z-index: 160;
 }
-#zoom-btn:hover { background: rgba(128,216,255,.28); }
-#zoom-btn.active { background: rgba(128,216,255,.3); color: #fff; }
-
-#sync-status{cursor:pointer}
+#menu-btn.open { background: rgba(128,216,255,.3); color: #fff; }
+#menu {
+  display: none; position: fixed; top: 56px; right: 6px; min-width: 190px; z-index: 160;
+  background: #1e1248; border: 1.5px solid rgba(128,216,255,.45); border-radius: 12px;
+  padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.6);
+}
+#menu.open { display: block; }
+.menu-item {
+  display: block; width: 100%; min-height: 44px; padding: 10px 14px; text-align: left;
+  background: none; border: none; border-radius: 8px; color: #fff;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.menu-item:active { background: rgba(128,216,255,.25); }
+.menu-item.danger { color: #ff8080; }
+.menu-item.armed { background: rgba(255,80,80,.35); color: #fff; }
+#logout-btn { display: none; }
+#logout-btn.shown { display: block; }
 
 /* 10-11 modal */
 #req1011-modal {
