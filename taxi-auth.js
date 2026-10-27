@@ -17,6 +17,7 @@ export const AUTH_CONFIGURED = !String(FIREBASE_CONFIG.apiKey || '').startsWith(
 const CSS = `
 #auth-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(10,5,30,.92);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-user-select:none;user-select:none}
 #auth-modal.visible{display:flex}
+#auth-modal,#auth-modal *{touch-action:manipulation}
 .auth-card{background:#1e1248;border:1.5px solid rgba(128,216,255,.45);border-radius:16px;padding:16px 12px;width:min(98%,400px);margin:max(10px,env(safe-area-inset-top)) auto 10px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.6);color:#fff;font-family:'Segoe UI',system-ui,sans-serif}
 .auth-title{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80d8ff;margin-bottom:10px}
 .auth-field{display:flex;align-items:center;gap:8px;min-height:46px;margin-bottom:8px;padding:0 12px;border-radius:10px;border:1.5px solid rgba(128,216,255,.25);background:rgba(255,255,255,.06);text-align:left;cursor:pointer}
@@ -35,8 +36,7 @@ const CSS = `
 .auth-k.on{background:#80d8ff;color:#1e1248}
 .auth-go{margin-top:12px;width:100%;padding:13px;border-radius:10px;border:none;background:#80d8ff;color:#1e1248;font-size:15px;font-weight:800;cursor:pointer}
 .auth-go:disabled{opacity:.5}
-.caret{display:inline-block;width:2px;height:1em;margin-left:1px;vertical-align:-.12em;background:#80d8ff;animation:caretblink 1s steps(1) infinite}
-@keyframes caretblink{0%,55%{opacity:1}56%,100%{opacity:0}}
+.caret{display:inline-block;width:2px;height:1em;margin-left:1px;vertical-align:-.12em;background:#80d8ff;}
 .auth-links{display:flex;gap:10px}
 .auth-link{flex:1;display:block;padding:13px 8px;border-radius:10px;border:1.5px solid rgba(128,216,255,.45);background:rgba(128,216,255,.12);color:#80d8ff;font-size:14px;font-weight:700;text-decoration:none;text-align:center}
 .auth-link:active{background:rgba(128,216,255,.35)}
@@ -140,6 +140,9 @@ function buildUi(onSubmit) {
     else return;
     e.preventDefault();
   });
+  // no double-tap zoom on this screen (the editor's own guard isn't loaded yet while the login box is showing)
+  let lastTap = 0;
+  modal.addEventListener('touchend', e => { const now = Date.now(); if (now - lastTap < 350) e.preventDefault(); lastTap = now; }, { passive: false });
   draw();
   return { show() { modal.classList.add('visible'); draw(); }, hide() { modal.classList.remove('visible'); }, isOpen: () => modal.classList.contains('visible') };
 }
