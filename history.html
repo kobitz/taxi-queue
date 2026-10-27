@@ -135,7 +135,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase, ref, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 import { FIREBASE_CONFIG } from './taxi-config.js';
-import { setupAuth } from './taxi-auth.js?v=3';
+import { setupAuth } from './taxi-auth.js?v=4';
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = await setupAuth(app);   // viewing needs no sign-in; only Clear All does
