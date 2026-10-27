@@ -6,7 +6,7 @@
    Firebase console → Project settings (gear) → General → Your apps → SDK setup and configuration → Config.
    While it still says PASTE_..., the pages behave as before (no login). */
 export const FIREBASE_CONFIG = {
-  apiKey: "PASTE_YOUR_WEB_API_KEY",
+  apiKey: "AIzaSyDIdRut22YrSFiITWea2H2JXvNf3rEUe8Y",
   authDomain: "taxi-queue-3e591.firebaseapp.com",
   databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com",
   projectId: "taxi-queue-3e591"
