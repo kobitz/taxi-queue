@@ -149,6 +149,8 @@ logoutBtn.addEventListener('click', () => { closeMenu(); auth.signOut(); });
 const themeBtn = document.getElementById('theme-btn');
 function applyTheme(light) {
   document.documentElement.classList.toggle('light', light);
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? '#f1f4fb' : '#2d1b69';
+  const sb = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (sb) sb.content = light ? 'default' : 'black';
   themeBtn.textContent = light ? 'Dark Mode' : 'Light Mode';
 }
 applyTheme(document.documentElement.classList.contains('light'));   // the page's <head> script already set it, so there's no flash
