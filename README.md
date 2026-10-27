@@ -67,6 +67,8 @@ This section has two tabs: **Dial Pad** (see below) and **Not in Queue** (the ti
 
 ### Clearing the Queue
 
+- **Gear menu → Clear all**, then tap again to confirm (undo restores it), or:
+
 - **Hold the "Loading" tile** (~350ms) — it turns red and reads "Clear all?"
 - **Tap it again** → the entire queue is cleared (lifting your finger after the hold does not count as that tap)
 - **Tap anywhere else** to cancel
@@ -152,9 +154,13 @@ Note: on iPhone an installed app has its own storage, separate from Safari, so i
 
 ---
 
+## Gear Menu (`stand.html`, `personal.html`)
+
+The gear in the top right holds **Bigger/Smaller Tiles**, **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. Tap anywhere else to close it.
+
 ## Tile Size
 
-Tap the **Bigger Tiles / Smaller Tiles** button (top right) to toggle between 10 columns and 5 columns. The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
+Open the **gear menu** (top right) and tap **Bigger Tiles / Smaller Tiles** to toggle between 10 columns and 5 columns (on `index.html` this is still a button in the top right). The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
 
 ---
 
