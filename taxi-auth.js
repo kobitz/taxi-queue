@@ -17,7 +17,7 @@ export const AUTH_CONFIGURED = !String(FIREBASE_CONFIG.apiKey || '').startsWith(
 const CSS = `
 #auth-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(10,5,30,.92);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-user-select:none;user-select:none}
 #auth-modal.visible{display:flex}
-#auth-modal,#auth-modal *{touch-action:manipulation}
+html,body,#auth-modal,#auth-modal *{touch-action:manipulation}
 .auth-card{background:#1e1248;border:1.5px solid rgba(128,216,255,.45);border-radius:16px;padding:16px 12px;width:min(98%,400px);margin:max(10px,env(safe-area-inset-top)) auto 10px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.6);color:#fff;font-family:'Segoe UI',system-ui,sans-serif}
 .auth-title{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80d8ff;margin-bottom:10px}
 .auth-field{display:flex;align-items:center;gap:8px;min-height:46px;margin-bottom:8px;padding:0 12px;border-radius:10px;border:1.5px solid rgba(128,216,255,.25);background:rgba(255,255,255,.06);text-align:left;cursor:pointer}
@@ -140,9 +140,16 @@ function buildUi(onSubmit) {
     else return;
     e.preventDefault();
   });
-  // no double-tap zoom on this screen (the editor's own guard isn't loaded yet while the login box is showing)
+  // No double-tap or pinch zoom while the login box is showing (the editor's own guard isn't loaded yet at this point).
   let lastTap = 0;
-  modal.addEventListener('touchend', e => { const now = Date.now(); if (now - lastTap < 350) e.preventDefault(); lastTap = now; }, { passive: false });
+  const open = () => modal.classList.contains('visible');
+  document.addEventListener('touchend', e => {
+    if (!open()) return;
+    const now = Date.now(); if (now - lastTap < 400) e.preventDefault(); lastTap = now;
+  }, { passive: false, capture: true });
+  document.addEventListener('touchstart', e => { if (open() && e.touches.length > 1) e.preventDefault(); }, { passive: false, capture: true });
+  document.addEventListener('gesturestart', e => { if (open()) e.preventDefault(); }, { passive: false, capture: true });
+  document.addEventListener('dblclick', e => { if (open()) e.preventDefault(); }, true);
   draw();
   return { show() { modal.classList.add('visible'); draw(); }, hide() { modal.classList.remove('visible'); }, isOpen: () => modal.classList.contains('visible') };
 }
