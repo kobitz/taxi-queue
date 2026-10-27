@@ -13,7 +13,7 @@ if (!PERSONAL) {
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'),
     import('./taxi-config.js'),
-    import('./taxi-auth.js?v=5'),
+    import('./taxi-auth.js?v=6'),
   ]);
   fb = dbm;
   const app = initializeApp(FIREBASE_CONFIG);
