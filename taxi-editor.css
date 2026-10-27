@@ -203,6 +203,5 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 .num-save { background:#80d8ff; color:#1e1248; }
 .num-skip { background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.2); }
 
-/* blinking text cursor in the keypad displays */
-.caret { display:inline-block; width:2px; height:.95em; margin-left:2px; vertical-align:-.1em; background:currentColor; animation:caretblink 1s steps(1) infinite; }
-@keyframes caretblink { 0%,55% { opacity:1 } 56%,100% { opacity:0 } }
+/* text cursor in the keypad displays */
+.caret { display:inline-block; width:2px; height:.95em; margin-left:2px; vertical-align:-.1em; background:currentColor; }
