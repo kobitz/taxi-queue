@@ -215,3 +215,37 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 
 /* text cursor in the keypad displays */
 .caret { display:inline-block; width:2px; height:.95em; margin-left:2px; vertical-align:-.1em; background:currentColor; }
+
+/* ── LIGHT MODE (gear menu → Light Mode; popups stay dark) ── */
+html.light { --bg:#f1f4fb; --highlight:#1565c0; --overflow:rgba(21,101,192,.12); --empty:rgba(20,30,80,.06); }
+html.light body { color:#1a1a3a; }
+html.light .divider { background:linear-gradient(90deg,transparent,rgba(21,101,192,.3),transparent); }
+html.light .row-label { color:rgba(21,101,192,.8); }
+html.light .col-header { color:rgba(21,101,192,.75); }
+html.light .grp-stand   { background:rgba(21,101,192,.18); color:#0d47a1; }
+html.light .grp-holding { background:rgba(106,27,154,.16); color:#6a1b9a; }
+html.light .q-overflow { border-color:rgba(21,101,192,.3); color:#1a1a3a; }
+html.light .q-empty { border-color:rgba(20,30,80,.18); }
+html.light .q-add { border-color:rgba(21,101,192,.4); color:rgba(21,101,192,.7); }
+html.light .q-zero { background:rgba(20,30,80,.08); border-color:rgba(20,30,80,.22); color:rgba(20,30,80,.6); }
+html.light .q-zero.primed { color:#b38f00; }
+html.light .q-zero.clear-armed { color:#fff; }
+html.light .tile.pool { background:rgba(21,101,192,.1); border-color:rgba(21,101,192,.3); color:#1a1a3a; }
+html.light .q-stand, html.light .q-hold { color:#fff; }
+html.light #sync-status.ok     { background:rgba(0,150,80,.18); color:#0b7a3e; }
+html.light #sync-status.saving { background:rgba(230,160,0,.2); color:#8a6200; }
+html.light #sync-status.error  { background:rgba(220,50,50,.15); color:#c62828; }
+html.light #undo-btn { background:rgba(230,120,0,.12); color:#c25e00; border-color:rgba(230,120,0,.45); }
+html.light #pad-display { border-color:rgba(21,101,192,.35); }
+html.light .pad-key { background:rgba(21,101,192,.1); border-color:rgba(21,101,192,.3); color:#1a1a3a; }
+html.light .pad-key.fn { color:#1565c0; }
+html.light .pad-key.filler, html.light .pad-key.fn.filler { background:rgba(20,30,80,.07); color:rgba(20,30,80,.7); border-color:rgba(20,30,80,.2); }
+html.light .pad-key.go { background:var(--stand); color:#fff; border-color:transparent; }
+html.light #menu-btn { color:#1565c0; }
+html.light #menu-btn.open { color:#0d47a1; }
+html.light #menu { background:#fff; border-color:rgba(21,101,192,.45); box-shadow:0 10px 30px rgba(20,30,80,.25); }
+html.light .menu-item { color:#1a1a3a; }
+html.light .menu-item:active { background:rgba(21,101,192,.15); }
+html.light .menu-item.armed { background:#d32f2f; color:#fff; }
+html.light .tile[style*="180, 180, 180"] { background:rgba(20,30,80,.07) !important; border-color:rgba(20,30,80,.22) !important; color:rgba(20,30,80,.65) !important; }
+html.light .tile[style*="dashed"] { border-color:rgba(21,101,192,.4) !important; color:rgba(21,101,192,.75) !important; background:rgba(21,101,192,.05) !important; }
