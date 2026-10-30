@@ -14,6 +14,8 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
 | `taxi-auth.js` / `taxi-config.js` | — | Dispatcher sign-in and Firebase settings |
 | `taxi-sound.js` | — | Key click and 10-11 alert sounds |
+| `taxi-local.js` | — | Used instead of Firebase when running the home-PC server |
+| `server/` | — | The home-PC server (Node.js) and Windows start scripts |
 | `database.rules.json` | — | Database security rules (copy into Firebase console) |
 
 `stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = Firebase, shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
@@ -226,6 +228,10 @@ See **Security** below for the database rules.
 To remove a dispatcher: delete their `dispatchers/<UID>` entry (and the user).
 
 ---
+
+## Running on your own PC instead of Firebase
+
+The same pages can run against a small server on a Windows PC (no Firebase, no domain). See **[SERVER-README.md](SERVER-README.md)**. The pages pick their backend from `taxi-config.js`; the home-PC server hands out its own copy of that file, so the GitHub Pages version keeps using Firebase and nothing needs editing. `taxi-local.js` is the stand-in for the Firebase library in that mode.
 
 ## Deployment
 

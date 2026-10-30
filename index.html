@@ -192,13 +192,11 @@
 
 <script type="module">
 import { tick } from './taxi-sound.js?v=1';
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, set, goOffline, goOnline } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+const { SDK, FIREBASE_CONFIG } = await import('./taxi-config.js');   // Firebase on GitHub Pages, or the home-PC server
+const { initializeApp } = await import(SDK.app);
+const { getDatabase, ref, onValue, set, goOffline, goOnline } = await import(SDK.db);
 
-const app = initializeApp({
-  apiKey: "AIzaSyPlaceholderNotNeededForRTDB",
-  databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com"
-});
+const app = initializeApp(FIREBASE_CONFIG);
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
 const maxRef          = ref(db, 'maxNum');

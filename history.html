@@ -131,11 +131,11 @@
 <div id="empty-state">No history yet</div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-import { FIREBASE_CONFIG } from './taxi-config.js';
-import { setupAuth } from './taxi-auth.js?v=6';
+import { FIREBASE_CONFIG, SDK } from './taxi-config.js';
+import { setupAuth } from './taxi-auth.js?v=7';
+const { initializeApp } = await import(SDK.app);
+const { getDatabase, ref, onValue, remove } = await import(SDK.db);
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = await setupAuth(app);   // viewing needs no sign-in; only Clear All does

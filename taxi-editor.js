@@ -9,11 +9,11 @@ const STORAGE_KEY = 'taxi-queue-personal';
 let fb = {}, db = null, queueRef = null, historyRef = null, maxRef = null, request1011Ref = null;
 let auth = { enabled: false, user: () => null, label: () => '', requireSignIn: async () => null, signOut: async () => {}, onChange() {} };
 if (!PERSONAL) {
-  const [{ initializeApp }, dbm, { FIREBASE_CONFIG }, { setupAuth }] = await Promise.all([
-    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
-    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'),
-    import('./taxi-config.js'),
-    import('./taxi-auth.js?v=6'),
+  const { SDK, FIREBASE_CONFIG } = await import('./taxi-config.js');
+  const [{ initializeApp }, dbm, { setupAuth }] = await Promise.all([
+    import(SDK.app),
+    import(SDK.db),
+    import('./taxi-auth.js?v=7'),
   ]);
   fb = dbm;
   const app = initializeApp(FIREBASE_CONFIG);

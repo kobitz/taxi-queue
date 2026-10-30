@@ -8,11 +8,10 @@
    auth.requireSignIn() resolves once someone is signed in (shows the sign-in box if needed)
    auth.signOut()
    auth.onChange(fn)    called with the user (or null) whenever sign-in state changes            */
-import { FIREBASE_CONFIG } from './taxi-config.js';
+import { FIREBASE_CONFIG, BACKEND, SDK } from './taxi-config.js';
 import { tick } from './taxi-sound.js?v=1';
 
-const AUTH_URL = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-export const AUTH_CONFIGURED = !String(FIREBASE_CONFIG.apiKey || '').startsWith('PASTE');
+export const AUTH_CONFIGURED = BACKEND === 'local' || !String(FIREBASE_CONFIG.apiKey || '').startsWith('PASTE');
 
 const CSS = `
 #auth-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(10,5,30,.92);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-user-select:none;user-select:none}
@@ -159,7 +158,7 @@ export async function setupAuth(app, { autoPrompt = false } = {}) {
     const none = { enabled: false, user: () => null, label: () => '', requireSignIn: async () => null, signOut: async () => {}, onChange() {} };
     return none;
   }
-  const m = await import(AUTH_URL);
+  const m = await import(SDK.auth);
   const auth = m.getAuth(app);
   let current = null, wanted = autoPrompt;
   const listeners = [], waiting = [];
