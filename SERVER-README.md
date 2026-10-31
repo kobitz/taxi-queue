@@ -25,14 +25,15 @@ Open <http://localhost:8787/stand.html> on the PC and sign in to check it works.
 ## 4. Make it reachable from the internet (Tailscale Funnel)
 1. Install Tailscale for Windows from <https://tailscale.com/download> and sign in (free personal account).
 2. In the Tailscale admin console (<https://login.tailscale.com/admin/dns>), make sure **MagicDNS** and **HTTPS certificates** are turned on.
-3. Open a **Command Prompt** and run:
+3. **Choose your machine name now, before starting the tunnel.** The name becomes part of your public address (`https://NAME.your-tailnet.ts.net`). To change it, open <https://login.tailscale.com/admin/machines>, find your PC, use the **...** menu → **Edit machine name** (or similar), and pick something short like `taxi-queue` (lowercase letters, numbers and dashes). Changing it later changes the address, and a **new name can take several minutes to an hour to start working** (phones show "cannot establish a secure connection" until its HTTPS certificate is ready). So pick it once.
+4. Open a **Command Prompt** and run:
    ```
    tailscale funnel --bg 8787
    ```
    The first time, it may print a link asking you to allow Funnel for your account. Open it, approve, then run the command again.
-4. It prints your public address, something like `https://yourpc.your-tailnet.ts.net`. That's your link. Check it on a phone **with Wi-Fi turned off**.
+5. It prints your public address, something like `https://yourpc.your-tailnet.ts.net`. That's your link. Check it on a phone **with Wi-Fi turned off**.
 
-The Tailscale command line has changed between versions. If the command above isn't accepted, run `tailscale funnel --help` and follow the current instructions. Tailscale's Funnel docs: <https://tailscale.com/kb/1223/tailscale-funnel>. I couldn't check their current limits, so read them once.
+If the new name doesn't load right away, wait and try again from a phone on mobile data before changing anything. The Tailscale command line has changed between versions. If the command above isn't accepted, run `tailscale funnel --help` and follow the current instructions. Tailscale's Funnel docs: <https://tailscale.com/kb/1223/tailscale-funnel>. I couldn't check their current limits, so read them once.
 
 Give out:
 - Drivers: `https://yourpc.your-tailnet.ts.net/`
