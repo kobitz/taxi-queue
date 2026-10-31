@@ -253,3 +253,7 @@ To update any page, edit the file directly on GitHub and commit. Changes go live
 | `taxi-auth.js` | `taxi-editor.js`, `history.html` |
 | `taxi-sound.js` | `taxi-editor.js`, `taxi-auth.js`, `index.html` |
 | `taxi-local.js` | `taxi-config.js` and the copy of it that `server/server.js` hands out |
+
+## License
+
+MIT. See [LICENSE](LICENSE). You are free to use, copy and change this for your own taxi stand or company.
