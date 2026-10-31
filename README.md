@@ -231,7 +231,7 @@ To remove a dispatcher: delete their `dispatchers/<UID>` entry (and the user).
 
 ## Running on your own PC instead of Firebase
 
-The same pages can run against a small server on a Windows PC (no Firebase, no domain). See **[SERVER-README.md](SERVER-README.md)**. The pages pick their backend from `taxi-config.js`; the home-PC server hands out its own copy of that file, so the GitHub Pages version keeps using Firebase and nothing needs editing. `taxi-local.js` is the stand-in for the Firebase library in that mode.
+The same pages can run against a small server on a Windows PC (no Firebase, no domain). See **[SERVER-README.md](SERVER-README.md)**. The pages pick their backend from `taxi-config.js`; the home-PC server hands out its own copy of that file, so the GitHub Pages version keeps using Firebase and nothing needs editing. `taxi-local.js` is the stand-in for the Firebase library in that mode. The server includes a local-only **control page** (add/remove dispatchers, live console, backups).
 
 ## Deployment
 

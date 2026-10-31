@@ -25,11 +25,20 @@ const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 const SESSION_DAYS = 30, KEEP_BACKUPS = 14, HISTORY_MAX = 5000;
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
+/* ── log: printed in the console window and shown on the control page ── */
+const logLines = [], logClients = new Set();
+function log(msg) {
+  const line = { t: Date.now(), msg: String(msg) };
+  logLines.push(line); if (logLines.length > 300) logLines.shift();
+  console.log(new Date(line.t).toLocaleTimeString() + '  ' + line.msg);
+  for (const c of logClients) c.write(`event: log\ndata: ${JSON.stringify(line)}\n\n`);
+}
+
 /* ── small JSON file helpers (atomic writes) ── */
 function readJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; } }
 function writeJsonNow(file, obj) { const tmp = file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, file); }
 const timers = {};
-function writeJsonSoon(file, obj) { clearTimeout(timers[file]); timers[file] = setTimeout(() => { try { writeJsonNow(file, obj); } catch (e) { console.error('save failed', e.message); } }, 200); }
+function writeJsonSoon(file, obj) { clearTimeout(timers[file]); timers[file] = setTimeout(() => { try { writeJsonNow(file, obj); } catch (e) { log('SAVE FAILED: ' + e.message); } }, 200); }
 
 /* ── state ── */
 let data = readJson(DATA_FILE, {});             // { queue:[], maxNum, updatedAt, history:{id:{...}}, request1011 }
@@ -37,14 +46,21 @@ let sessions = readJson(SESSIONS_FILE, {});     // token -> { user, exp }
 const saveData = () => writeJsonSoon(DATA_FILE, data);
 const saveSessions = () => writeJsonSoon(SESSIONS_FILE, sessions);
 const loadUsers = () => readJson(USERS_FILE, {});   // name -> { salt, hash }   (re-read so adding a dispatcher needs no restart)
+const saveUsers = u => writeJsonNow(USERS_FILE, u);
 
-/* ── daily backup ── */
-function dailyBackup() {
+/* ── backups: one a day automatically (last 14 kept), plus on demand ── */
+function makeBackup(label) {
   try {
-    const day = new Date().toISOString().slice(0, 10), f = path.join(BACKUP_DIR, `data-${day}.json`);
-    if (!fs.existsSync(f) && fs.existsSync(DATA_FILE)) fs.copyFileSync(DATA_FILE, f);
+    writeJsonNow(DATA_FILE, data);
+    const f = path.join(BACKUP_DIR, `data-${label}.json`);
+    fs.copyFileSync(DATA_FILE, f);
     fs.readdirSync(BACKUP_DIR).filter(n => /^data-.*\.json$/.test(n)).sort().slice(0, -KEEP_BACKUPS).forEach(n => fs.unlinkSync(path.join(BACKUP_DIR, n)));
-  } catch (e) { console.error('backup failed', e.message); }
+    return true;
+  } catch (e) { log('BACKUP FAILED: ' + e.message); return false; }
+}
+function dailyBackup() {
+  const day = new Date().toISOString().slice(0, 10);
+  if (!fs.existsSync(path.join(BACKUP_DIR, `data-${day}.json`)) && fs.existsSync(DATA_FILE)) makeBackup(day);
 }
 dailyBackup(); setInterval(dailyBackup, 6 * 3600 * 1000);
 
@@ -116,11 +132,11 @@ async function api(req, res, url) {
     if (lockedOut(ipOf(req), name)) return send(res, 429, { code: 'auth/too-many-requests' });
     const u = loadUsers()[name];
     const ok = u && crypto.timingSafeEqual(Buffer.from(hashPw(String(b.password || ''), u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
-    if (!ok) { noteFail(key); noteFail('user|' + name); noteFail('ip|' + ipOf(req)); return send(res, 401, { code: 'auth/invalid-credential' }); }
+    if (!ok) { log(`Login FAILED for "${name}" from ${ipOf(req)}`); noteFail(key); noteFail('user|' + name); noteFail('ip|' + ipOf(req)); return send(res, 401, { code: 'auth/invalid-credential' }); }
     failures.delete(key);
     const token = crypto.randomBytes(32).toString('hex');
     sessions[token] = { user: name, exp: Date.now() + SESSION_DAYS * 86400000 };
-    saveSessions();
+    saveSessions(); log(`${name} signed in`);
     return send(res, 200, { token, user: name });
   }
   if (route === '/api/me' && req.method === 'GET') {
@@ -129,7 +145,7 @@ async function api(req, res, url) {
   }
   if (route === '/api/logout' && req.method === 'POST') {
     const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers['authorization'] || '');
-    if (m && sessions[m[1]]) { delete sessions[m[1]]; saveSessions(); }
+    if (m && sessions[m[1]]) { log(`${sessions[m[1]].user} signed out`); delete sessions[m[1]]; saveSessions(); }
     return send(res, 200, {});
   }
 
@@ -173,6 +189,10 @@ async function api(req, res, url) {
     }
     saveData();
     broadcast(changes, b.clientId);
+    if (draft.request1011) log(`10-11 request from #${draft.request1011.number}`);
+    if ('queue' in draft) log(`${user} saved the queue (${draft.queue ? draft.queue.length : 0} in queue)`);
+    if (draft.maxNum) log(`${user} set the highest taxi number to ${draft.maxNum}`);
+    if (draft.history === null) log(`${user} cleared the history`);
     return send(res, 200, { results });
   }
   send(res, 404, { code: 'not-found' });
@@ -215,9 +235,102 @@ const server = http.createServer(async (req, res) => {
   }
 });
 server.listen(PORT, HOST, () => {
+  log(`Taxi queue server running at http://localhost:${PORT}  (listening on ${HOST})`);
   const users = Object.keys(loadUsers());
-  console.log(`Taxi queue server running at http://localhost:${PORT}  (listening on ${HOST})`);
-  console.log(users.length ? `Dispatcher accounts: ${users.join(', ')}` : 'No dispatcher accounts yet. Double-click manage-dispatchers.bat (or: node users.js add <name>) to create one.');
+  log(users.length ? `Dispatcher accounts: ${users.join(', ')}` : 'No dispatcher accounts yet. Open the control page and add one.');
 });
+
+/* ═══ CONTROL PAGE (this PC only, on its own port) ═══
+   Tailscale forwards the main port to the internet, so the control page lives on a different port that is never
+   forwarded, and it also refuses requests that don't look like they come from this browser on this PC. */
+const ADMIN_PORT = parseInt(process.env.ADMIN_PORT || '8788', 10);
+const ADMIN_HTML = path.join(__dirname, 'admin.html');
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?$/i, LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+function adminOk(req, needHeader) {
+  if (!LOCAL_HOST.test(req.headers.host || '')) return false;                       // blocks DNS-rebinding tricks
+  if (req.headers.origin && !LOCAL_ORIGIN.test(req.headers.origin)) return false;   // blocks other websites posting here
+  if (needHeader && req.headers['x-admin'] !== '1') return false;                   // a custom header can't be sent cross-site without permission
+  return true;
+}
+let urlCache = { t: 0, urls: [] };
+function publicUrls() {
+  return new Promise(res => {
+    if (Date.now() - urlCache.t < 30000) return res(urlCache.urls);
+    require('child_process').execFile('tailscale', ['funnel', 'status'], { timeout: 4000, windowsHide: true }, (err, out, errOut) => {
+      const text = String(out || '') + String(errOut || '');
+      const urls = [...new Set((text.match(/https:\/\/[a-z0-9.-]+\.ts\.net/gi) || []).map(u => u.toLowerCase()))];
+      urlCache = { t: Date.now(), urls }; res(urls);
+    });
+  });
+}
+function adminState() {
+  const users = loadUsers(), now = Date.now();
+  const active = {}; Object.values(sessions).forEach(x => { if (x.exp > now) active[x.user] = (active[x.user] || 0) + 1; });
+  let backups = [];
+  try { backups = fs.readdirSync(BACKUP_DIR).filter(n => /^data-.*\.json$/.test(n)).sort().reverse().map(n => ({ name: n, kb: Math.max(1, Math.round(fs.statSync(path.join(BACKUP_DIR, n)).size / 1024)) })); } catch (e) {}
+  return {
+    port: PORT, uptime: Math.round(process.uptime()), viewers: clients.size,
+    queue: Array.isArray(data.queue) ? data.queue.length : 0, updatedAt: data.updatedAt || null,
+    history: data.history ? Object.keys(data.history).length : 0,
+    users: Object.keys(users).sort().map(n => ({ name: n, signedIn: active[n] || 0 })), backups
+  };
+}
+const adminServer = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://x'), route = url.pathname;
+    if (!adminOk(req, req.method !== 'GET')) { res.writeHead(403); return res.end('Forbidden'); }
+    if (route === '/' && req.method === 'GET') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(fs.readFileSync(ADMIN_HTML)); }
+    if (route === '/api/state') { const st = adminState(); st.urls = await publicUrls(); return send(res, 200, st); }
+    if (route === '/api/log') {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive' });
+      res.write(`event: backlog\ndata: ${JSON.stringify(logLines)}\n\n`);
+      logClients.add(res); const ka = setInterval(() => res.write(': ping\n\n'), 25000);
+      req.on('close', () => { clearInterval(ka); logClients.delete(res); });
+      return;
+    }
+    if (route === '/api/users' && req.method === 'POST') {
+      const b = await body(req), name = String(b.name || '').trim().toLowerCase(), users = loadUsers();
+      if (!/^[a-z0-9._-]{2,30}$/.test(name)) return send(res, 400, { error: 'Names are 2-30 letters, numbers, dot, dash or underscore.' });
+      if (b.op === 'remove') {
+        if (!users[name]) return send(res, 404, { error: 'No such dispatcher.' });
+        delete users[name]; saveUsers(users);
+        for (const t of Object.keys(sessions)) if (sessions[t].user === name) delete sessions[t];
+        saveSessions(); log(`Dispatcher "${name}" removed (signed out everywhere)`);
+        return send(res, 200, {});
+      }
+      if (b.op === 'add' || b.op === 'passwd') {
+        const pw = String(b.password || '');
+        if (pw.length < 8 || pw.length > 100) return send(res, 400, { error: 'Password must be at least 8 characters.' });
+        if (b.op === 'add' && users[name]) return send(res, 409, { error: `"${name}" already exists.` });
+        if (b.op === 'passwd' && !users[name]) return send(res, 404, { error: 'No such dispatcher.' });
+        const salt = crypto.randomBytes(16).toString('hex');
+        users[name] = { salt, hash: hashPw(pw, salt) }; saveUsers(users);
+        if (b.op === 'passwd') { for (const t of Object.keys(sessions)) if (sessions[t].user === name) delete sessions[t]; saveSessions(); }
+        log(b.op === 'add' ? `Dispatcher "${name}" created` : `Password changed for "${name}" (signed out everywhere)`);
+        return send(res, 200, {});
+      }
+      return send(res, 400, { error: 'Bad request.' });
+    }
+    if (route === '/api/action' && req.method === 'POST') {
+      const b = await body(req);
+      if (b.action === 'backup') { const ok = makeBackup(new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')); log(ok ? 'Backup saved' : 'Backup failed'); return send(res, ok ? 200 : 500, {}); }
+      if (b.action === 'clear-queue') { setPath('queue', null); data.updatedAt = Date.now(); saveData(); broadcast([{ path: 'queue', value: null }, { path: 'updatedAt', value: data.updatedAt }], 'admin'); log('Queue cleared from the control page'); return send(res, 200, {}); }
+      if (b.action === 'clear-history') { setPath('history', null); saveData(); broadcast([{ path: 'history', value: null }], 'admin'); log('History cleared from the control page'); return send(res, 200, {}); }
+      if (b.action === 'open-data') { try { require('child_process').spawn('explorer', [DATA_DIR], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref(); } catch (e) {} return send(res, 200, {}); }
+      return send(res, 400, { error: 'Unknown action.' });
+    }
+    send(res, 404, { error: 'not found' });
+  } catch (e) { if (!res.headersSent) send(res, 400, { error: 'Bad request.' }); }
+});
+if (ADMIN_PORT > 0) {
+  adminServer.on('error', e => log(`Control page could not start on port ${ADMIN_PORT}: ${e.message}`));
+  adminServer.listen(ADMIN_PORT, '127.0.0.1', () => {
+    log(`Control page: http://localhost:${ADMIN_PORT}   (this PC only)`);
+    if (process.env.OPEN_ADMIN === '1') {
+      try { require('child_process').spawn('cmd', ['/c', 'start', '', `http://localhost:${ADMIN_PORT}`], { detached: true, stdio: 'ignore', windowsHide: true }).on('error', () => {}).unref(); } catch (e) {}
+    }
+  });
+}
+
 function shutdown() { for (const f of Object.keys(timers)) clearTimeout(timers[f]); try { writeJsonNow(DATA_FILE, data); writeJsonNow(SESSIONS_FILE, sessions); } catch (e) {} process.exit(0); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

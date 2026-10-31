@@ -12,15 +12,21 @@ The same pages, but a small program on your Windows PC replaces Firebase. Phones
 1. On GitHub, open the repo → green **Code** button → **Download ZIP**. Unzip it somewhere permanent, for example `C:\taxi-queue`.
 2. Install **Node.js** (the **LTS** download) from <https://nodejs.org>. Accept the defaults.
 
-## 2. Create dispatcher accounts
-1. Open the `server` folder and double-click **manage-dispatchers.bat**.
-2. Choose **1**, type a name (for example `ko`), then a password (at least 8 characters; it won't show as you type).
-3. Make one account per dispatcher, plus a spare. The account name is what shows in History.
+## 2. Start the server
+Double-click **start.bat** in the `server` folder. A black window opens (leave it open; closing it stops the server) and the **control page** opens in your browser. If the server ever crashes it restarts itself.
 
-## 3. Start the server
-Double-click **start.bat** in the `server` folder. You should see `Taxi queue server running at http://localhost:8787`.
+## 3. Add dispatchers on the control page
+The control page is at <http://localhost:8788> (bookmark it). It only works on this PC and is never shared through the internet.
 
-Open <http://localhost:8787/stand.html> on the PC and sign in to check it works. Leave the black window open. If the server crashes it restarts itself.
+- **Dispatchers:** type a name and a password (at least 8 characters) and click **Add dispatcher**. Use the **−** button next to a name to remove them (tap twice to confirm); they're signed out immediately. **Change password** signs that person out everywhere. The name is what shows in History.
+- **Right now:** how many pages are open, how many taxis are in the queue, and when it last changed.
+- **Addresses:** the links for this PC and, if Tailscale Funnel is on, your public links, with Copy buttons.
+- **Maintenance:** back up now, open the data folder, clear the queue, clear the history (each needs two taps).
+- **Console:** a live log of sign-ins, failed logins, 10-11 requests and account changes. Passwords are never logged.
+
+Make one account per dispatcher, plus a spare. Prefer a terminal? `manage-dispatchers.bat` does the same for accounts.
+
+Check it works: open <http://localhost:8787/stand.html> on the PC and sign in.
 
 ## 4. Make it reachable from the internet (Tailscale Funnel)
 1. Install Tailscale for Windows from <https://tailscale.com/download> and sign in (free personal account).
@@ -48,10 +54,10 @@ Phones need to **Add to Home Screen again** from the new address. Settings saved
 - **Backups:** the queue and history are in `server\data`. A copy is saved each day in `server\data\backups` (the last 14 are kept). Copy that folder to a USB stick or cloud drive now and then.
 
 ## Good to know
-- The server only listens on this PC (`127.0.0.1`); the internet reaches it only through Tailscale. To also allow other devices on your home Wi-Fi, start it with the environment variable `HOST=0.0.0.0`.
+- The server (port 8787) and the control page (port 8788) only listen on this PC (`127.0.0.1`). Only share port 8787 with Tailscale, **never 8788**. To also allow other devices on your home Wi-Fi to reach the queue, start the server with the environment variable `HOST=0.0.0.0` (the control page always stays on this PC).
 - Passwords are stored scrambled (not readable). After 6 wrong tries for the same account from one place, logins pause for 15 minutes.
 - Drivers can read the queue and send 10-11 requests; only signed-in dispatchers can change anything. Same rules as the Firebase version.
 - The pages need the PC. If it's off or offline, the live view shows OFFLINE.
 - There is no limit of 100 connections like Firebase's free plan.
-- To remove a dispatcher: **manage-dispatchers.bat** → 3. They're signed out immediately.
-- To reset the queue and history, stop the server and delete `server\data\data.json`.
+- To remove a dispatcher: use the **−** button on the control page. They're signed out immediately.
+- To reset the queue and history, use **Clear the queue / Clear the history** on the control page.

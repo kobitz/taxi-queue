@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taxi Queue Server</title>
+<style>
+:root{--bg:#1a1040;--card:#251659;--line:rgba(128,216,255,.25);--hi:#80d8ff;--txt:#fff;--dim:rgba(255,255,255,.6);--bad:#ff6b6b;--ok:#69ffb0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;padding:20px;max-width:900px;margin:auto}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--hi);margin:0 0 12px}
+.sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(105,255,176,.18);color:var(--ok)}
+.pill.bad{background:rgba(255,107,107,.2);color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:var(--dim)}
+button{font:inherit;font-weight:700;font-size:14px;border:none;border-radius:9px;padding:9px 14px;background:var(--hi);color:#1e1248;cursor:pointer}
+button.ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid var(--line)}
+button.danger{background:rgba(255,107,107,.18);color:var(--bad);border:1px solid rgba(255,107,107,.5)}
+button.danger.armed{background:var(--bad);color:#fff}
+button.minus{width:36px;height:36px;padding:0;font-size:22px;line-height:1}
+button:disabled{opacity:.5}
+input{font:inherit;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;min-width:150px}
+.user{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.user:last-child{border-bottom:none}.user .n{font-weight:700;font-size:16px;flex:1}.user .s{font-size:12px;color:var(--dim)}
+.empty{color:var(--dim);font-size:14px;padding:6px 0}
+.msg{min-height:18px;font-size:13px;margin-top:8px}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+a{color:var(--hi)}code{background:rgba(255,255,255,.1);padding:1px 6px;border-radius:5px}
+#log{background:#0d0826;border-radius:10px;padding:10px 12px;height:240px;overflow:auto;font:12.5px/1.5 Consolas,monospace;white-space:pre-wrap}
+#log .t{color:var(--dim)}#log .w{color:#ffb74d}
+.addr{display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap}
+.pw{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+</style></head><body>
+<h1>Taxi Queue Server <span class="pill" id="status">starting…</span></h1>
+<div class="sub">Control page — only reachable from this PC. Leave the server's black window open; closing it stops the server.</div>
+
+<div class="card"><h2>Addresses</h2><div id="addrs"></div></div>
+
+<div class="card"><h2>Right now</h2>
+  <div class="stats">
+    <div class="stat"><b id="s-viewers">–</b><span>pages open (live)</span></div>
+    <div class="stat"><b id="s-queue">–</b><span>taxis in queue</span></div>
+    <div class="stat"><b id="s-updated">–</b><span>last queue change</span></div>
+    <div class="stat"><b id="s-history">–</b><span>history entries</span></div>
+    <div class="stat"><b id="s-uptime">–</b><span>server running for</span></div>
+  </div></div>
+
+<div class="card"><h2>Dispatchers</h2>
+  <div id="users"></div>
+  <div class="row" style="margin-top:14px">
+    <input id="n-name" placeholder="name (no spaces)" autocomplete="off">
+    <input id="n-pw" type="password" placeholder="password (8+ characters)" autocomplete="new-password">
+    <input id="n-pw2" type="password" placeholder="password again" autocomplete="new-password">
+    <button id="add">Add dispatcher</button>
+  </div>
+  <div class="msg" id="add-msg"></div>
+</div>
+
+<div class="card"><h2>Maintenance</h2>
+  <div class="row">
+    <button class="ghost" id="backup">Back up now</button>
+    <button class="ghost" id="opendata">Open data folder</button>
+    <button class="danger" id="clearq">Clear the queue</button>
+    <button class="danger" id="clearh">Clear the history</button>
+  </div>
+  <div class="msg" id="act-msg"></div>
+  <div class="sub" style="margin:10px 0 4px">Backups (one each day is kept automatically, last 14):</div>
+  <div id="backups" class="empty"></div>
+</div>
+
+<div class="card"><h2>Console</h2><div id="log"></div></div>
+
+<script>
+const H = { 'Content-Type': 'application/json', 'X-Admin': '1' };
+const $ = id => document.getElementById(id);
+const api = (p, body) => fetch(p, body ? { method: 'POST', headers: H, body: JSON.stringify(body) } : { headers: { 'X-Admin': '1' } }).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Something went wrong.'); return j; });
+function say(el, text, cls) { el.textContent = text; el.className = 'msg ' + (cls || ''); }
+function ago(ms) { if (!ms) return 'never'; const m = Math.floor((Date.now() - ms) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.floor(m / 60) + ' h ago'; }
+function dur(s) { return s < 60 ? s + ' s' : s < 3600 ? Math.floor(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.floor(s % 3600 / 60) + ' min'; }
+function armable(btn, label, run) {             // two taps to confirm
+  let t = null;
+  btn.addEventListener('click', () => {
+    if (!btn.classList.contains('armed')) { btn.classList.add('armed'); btn.dataset.l = btn.textContent; btn.textContent = label; t = setTimeout(reset, 3000); return; }
+    reset(); run();
+  });
+  function reset() { clearTimeout(t); btn.classList.remove('armed'); if (btn.dataset.l) btn.textContent = btn.dataset.l; }
+}
+function copy(text, btn) { navigator.clipboard.writeText(text).then(() => { const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = o, 1200); }); }
+
+let lastUsers = '';
+function renderUsers(users) {
+  if (document.querySelector('#users .pw')) return;      // don't rebuild the list while a password box is open
+  const sig = JSON.stringify(users); if (sig === lastUsers) return; lastUsers = sig;
+  const box = $('users'); box.textContent = '';
+  if (!users.length) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'No dispatchers yet. Add one below. Nobody can change the queue until you do.'; box.appendChild(d); return; }
+  users.forEach(u => {
+    const row = document.createElement('div'); row.className = 'user';
+    const n = document.createElement('div'); n.className = 'n'; n.textContent = u.name;
+    const s = document.createElement('div'); s.className = 's'; s.textContent = u.signedIn ? `signed in on ${u.signedIn} device${u.signedIn > 1 ? 's' : ''}` : 'not signed in';
+    const pw = document.createElement('button'); pw.className = 'ghost'; pw.textContent = 'Change password';
+    const rm = document.createElement('button'); rm.className = 'danger minus'; rm.textContent = '−'; rm.title = 'Remove ' + u.name;
+    row.append(n, s, pw, rm); box.appendChild(row);
+    pw.addEventListener('click', () => {
+      if (row.nextSibling && row.nextSibling.className === 'pw') { row.nextSibling.remove(); return; }
+      const f = document.createElement('div'); f.className = 'pw';
+      const a = document.createElement('input'); a.type = 'password'; a.placeholder = 'new password (8+)'; a.autocomplete = 'new-password';
+      const b = document.createElement('input'); b.type = 'password'; b.placeholder = 'again'; b.autocomplete = 'new-password';
+      const go = document.createElement('button'); go.textContent = 'Save';
+      const m = document.createElement('div'); m.className = 'msg';
+      f.append(a, b, go, m); row.after(f); a.focus();
+      go.addEventListener('click', async () => {
+        if (a.value !== b.value) return say(m, "The passwords don't match.", 'bad');
+        try { await api('/api/users', { op: 'passwd', name: u.name, password: a.value }); f.remove(); say($('add-msg'), `Password changed for "${u.name}". They have been signed out everywhere.`, 'ok'); refresh(); }
+        catch (e) { say(m, e.message, 'bad'); }
+      });
+    });
+    armable(rm, 'Remove?', async () => { try { await api('/api/users', { op: 'remove', name: u.name }); refresh(); } catch (e) { say($('add-msg'), e.message, 'bad'); } });
+  });
+}
+async function refresh() {
+  try {
+    const s = await api('/api/state');
+    $('status').textContent = 'running'; $('status').className = 'pill';
+    $('s-viewers').textContent = s.viewers; $('s-queue').textContent = s.queue; $('s-updated').textContent = ago(s.updatedAt);
+    $('s-history').textContent = s.history; $('s-uptime').textContent = dur(s.uptime);
+    const a = $('addrs'); a.textContent = '';
+    const line = (label, url) => {
+      const d = document.createElement('div'); d.className = 'addr';
+      const l = document.createElement('span'); l.style.minWidth = '110px'; l.style.color = 'var(--dim)'; l.textContent = label;
+      const k = document.createElement('a'); k.href = url; k.target = '_blank'; k.textContent = url;
+      const c = document.createElement('button'); c.className = 'ghost'; c.textContent = 'Copy';
+      c.addEventListener('click', () => copy(url, c));
+      d.append(l, k, c); a.appendChild(d);
+    };
+    line('This PC', `http://localhost:${s.port}/`);
+    line('This PC (dispatch)', `http://localhost:${s.port}/stand.html`);
+    if (s.urls.length) s.urls.forEach(u => { line('Public (drivers)', u + '/'); line('Public (dispatch)', u + '/stand.html'); });
+    else { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'No public address found. If you use Tailscale Funnel, run "tailscale funnel --bg ' + s.port + '" (see SERVER-README.md).'; a.appendChild(d); }
+    renderUsers(s.users);
+    $('backups').textContent = s.backups.length ? s.backups.map(b => `${b.name}  (${b.kb} KB)`).join('\n') : 'None yet.'; $('backups').style.whiteSpace = 'pre-line';
+  } catch (e) { $('status').textContent = 'not responding'; $('status').className = 'pill bad'; }
+}
+$('add').addEventListener('click', async () => {
+  const m = $('add-msg'), name = $('n-name').value.trim(), pw = $('n-pw').value;
+  if ($('n-pw2').value !== pw) return say(m, "The passwords don't match.", 'bad');
+  try { await api('/api/users', { op: 'add', name, password: pw }); say(m, `Added "${name.toLowerCase()}".`, 'ok'); $('n-name').value = $('n-pw').value = $('n-pw2').value = ''; refresh(); }
+  catch (e) { say(m, e.message, 'bad'); }
+});
+$('backup').addEventListener('click', () => api('/api/action', { action: 'backup' }).then(() => { say($('act-msg'), 'Backup saved.', 'ok'); refresh(); }).catch(e => say($('act-msg'), e.message, 'bad')));
+$('opendata').addEventListener('click', () => api('/api/action', { action: 'open-data' }).catch(() => {}));
+armable($('clearq'), 'Tap again to clear', () => api('/api/action', { action: 'clear-queue' }).then(() => { say($('act-msg'), 'Queue cleared.', 'ok'); refresh(); }).catch(e => say($('act-msg'), e.message, 'bad')));
+armable($('clearh'), 'Tap again to clear', () => api('/api/action', { action: 'clear-history' }).then(() => { say($('act-msg'), 'History cleared.', 'ok'); refresh(); }).catch(e => say($('act-msg'), e.message, 'bad')));
+
+/* live console */
+function addLog(l) {
+  const box = $('log'), stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+  const d = document.createElement('div'), t = document.createElement('span'); t.className = 't'; t.textContent = new Date(l.t).toLocaleTimeString() + '  ';
+  d.appendChild(t); const m = document.createElement('span'); if (/FAIL/i.test(l.msg)) m.className = 'w'; m.textContent = l.msg; d.appendChild(m); box.appendChild(d);
+  while (box.childNodes.length > 300) box.removeChild(box.firstChild);
+  if (stick) box.scrollTop = box.scrollHeight;
+}
+const es = new EventSource('/api/log');
+es.addEventListener('backlog', e => JSON.parse(e.data).forEach(addLog));
+es.addEventListener('log', e => addLog(JSON.parse(e.data)));
+refresh(); setInterval(refresh, 3000);
+</script></body></html>
