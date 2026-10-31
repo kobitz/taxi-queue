@@ -11,7 +11,7 @@ export const BACKEND = 'firebase';
 const V = 'https://www.gstatic.com/firebasejs/10.12.0/';
 export const SDK = { app: V + 'firebase-app.js', db: V + 'firebase-database.js', auth: V + 'firebase-auth.js' };
 export const FIREBASE_CONFIG = {
-  apiKey: "PASTE_YOUR_WEB_API_KEY",
+  apiKey: "AIzaSyDIdRut22YrSFiITWea2H2JXvNf3rEUe8Y",
   authDomain: "taxi-queue-3e591.firebaseapp.com",
   databaseURL: "https://taxi-queue-3e591-default-rtdb.firebaseio.com",
   projectId: "taxi-queue-3e591"
