@@ -234,6 +234,11 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) send(res, 400, { code: 'bad-request' });
   }
 });
+server.on('error', e => {
+  if (e.code === 'EADDRINUSE') log(`Port ${PORT} is already in use. Is the server already running in another window? Close that one first (or change the port with: set PORT=8790).`);
+  else log(`Server could not start: ${e.message}`);
+  process.exit(2);          // 2 = don't keep restarting (start.bat stops on this)
+});
 server.listen(PORT, HOST, () => {
   log(`Taxi queue server running at http://localhost:${PORT}  (listening on ${HOST})`);
   const users = Object.keys(loadUsers());

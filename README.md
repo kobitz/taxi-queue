@@ -2,6 +2,8 @@
 
 A real-time taxi queue management web app built for use on mobile and desktop. Tracks which taxis are at the stand, in holding, or waiting in queue — with live sync across multiple devices.
 
+It runs in either of two ways, with the same pages: on **Firebase + GitHub Pages** (the default, described below), or on **your own Windows PC** with a small server (see [SERVER-README.md](SERVER-README.md)). The two don't share data.
+
 ---
 
 ## Pages
@@ -12,15 +14,16 @@ A real-time taxi queue management web app built for use on mobile and desktop. T
 | `stand.html` | `/stand.html` | **Editable queue** — add, remove, reorder taxis; syncs to all devices |
 | `personal.html` | `/personal.html` | **Personal queue** — same interface, saved locally to your browser only |
 | `history.html` | `/history.html` | **Change log** — live feed of every add, drop, load, and move |
-| `taxi-auth.js` / `taxi-config.js` | — | Dispatcher sign-in and Firebase settings |
+| `taxi-config.js` | — | Which backend to use (Firebase or home-PC server) and the Firebase project settings |
+| `taxi-auth.js` | — | Dispatcher sign-in box (on-screen keyboard) |
 | `taxi-sound.js` | — | Key click and 10-11 alert sounds |
 | `taxi-local.js` | — | Used instead of Firebase when running the home-PC server |
-| `server/` | — | The home-PC server (Node.js) and Windows start scripts |
+| `server/` | — | The home-PC server (Node.js), its control page and Windows start scripts; see [SERVER-README.md](SERVER-README.md) |
 | `database.rules.json` | — | Database security rules (copy into Firebase console) |
 
-`stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = Firebase, shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
+`stand.html` and `personal.html` are thin pages that share one editor: `taxi-editor.js` (logic) and `taxi-editor.css` (styles). The page sets its mode (`stand` = shared queue; `personal` = this browser only) and the shared files do the rest, so a fix or feature is made once. `index.html` (live view) and `history.html` are separate.
 
-**Updating shared files:** the pages load them as `taxi-editor.js?v=1` and `taxi-editor.css?v=1`. After changing either file, bump the `v=` number in both `stand.html` and `personal.html` so phones fetch the new version instead of a cached one.
+Icons and manifests (`icon-*.png`, `apple-touch-icon.png`, `manifest-*.json`) live in the repo root for the installable-app feature.
 
 Hosted at: `https://kobitz.github.io/taxi-queue`
 
@@ -69,11 +72,12 @@ This section has two tabs: **Dial Pad** (see below) and **Not in Queue** (the ti
 
 ### Clearing the Queue
 
-- **Gear menu → Clear all**, then tap again to confirm (undo restores it), or:
+Two ways, both need a second tap to confirm:
 
-- **Hold the "Loading" tile** (~350ms) — it turns red and reads "Clear all?"
-- **Tap it again** → the entire queue is cleared (lifting your finger after the hold does not count as that tap)
-- **Tap anywhere else** to cancel
+- **Gear menu → Clear all**, then tap again (it turns red and says "Tap again to clear all")
+- **Hold the "Loading" tile** (~350ms) until it turns red and reads "Clear all?", then **tap it again**. Lifting your finger after the hold does not count as that tap. Tap anywhere else to cancel
+
+**Undo** brings a cleared queue back.
 
 ### Replacing a Filler with a Number
 
@@ -115,8 +119,7 @@ The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the p
 | **Filler** / **Filler In-Front** | Add a filler to the end / front of the queue (no number needed) |
 
 - Tapping the **+** tile in the queue opens this tab. The pad stays open after adding so you can enter several numbers in a row
-- Keys make a soft click, and a blinking cursor shows where typing goes. (The phone's own keyboard click can't be triggered from a web page, so this is a similar sound made by the app.)
-- `stand.html` asks the phone to keep the screen on while the page is open (not every phone supports this)
+- Keys make a soft click, and a cursor bar shows where typing goes. The login keyboard and the taxi-number box do the same. (The phone's own keyboard click can't be triggered from a web page, so this is a similar sound made by the app. An iPhone's silent switch mutes it.)
 - Errors (invalid number, already in the queue) show in the pad's display instead of a popup
 - **Auto-scroll:** when a key press or a tap in Not in Queue adds a new queue row, the page scrolls by the same amount so the button stays under your finger and you can keep tapping
 - **Physical keyboard** (desktop): while the tab is open, digits type the number, Backspace deletes, **Enter** adds it to the end of the queue (or replaces a filler / saves the highest number), and **Shift+Enter** adds it to the front
@@ -133,13 +136,15 @@ When a driver holds the "10-11" tile in the live view, a modal appears on `stand
 
 If multiple stand.html instances are open, all of them receive the notification simultaneously.
 
-The stand also **beeps and vibrates** (where the phone allows it) when a request arrives, and repeats every 5 seconds until someone taps OK or Undo. Browsers only allow sound after the page has been touched once, and an iPhone's silent switch mutes it.
+The stand also **beeps and vibrates** (where the phone allows it; iPhones don't allow vibration from web pages) when a request arrives, and repeats every 5 seconds until someone taps OK or Undo. Browsers only allow sound after the page has been touched once.
+
+To help the dispatcher notice requests, `stand.html` also asks the phone to **keep the screen on** while the page is open (not every phone supports this). Neither feature works when the app is closed or the phone is locked; that would need push notifications, which this app doesn't use.
 
 ---
 
 ## My Taxi Highlight
 
-On first load of `index.html` or `personal.html`, a **Your taxi number** box appears with its own on-page dial pad (type 1–140, tap **Save**, or **Skip**). Your tile is highlighted in solid light blue (the same color as the bottom-right tile of the app icon) wherever it appears in the queue. On `personal.html` it also highlights in the Not in Queue list. Holding the 10-11 tile on `index.html` before you've set a number opens the same box. The number is saved per device per browser.
+On first load of `index.html` or `personal.html`, a **Your taxi number** box appears with its own on-page dial pad (type a number from 1 up to the highest taxi number, 140 by default; tap **Save**, or **Skip**). Your tile is highlighted in solid light blue (the same color as the bottom-right tile of the app icon) wherever it appears in the queue. On `personal.html` it also highlights in the Not in Queue list. Holding the 10-11 tile on `index.html` before you've set a number opens the same box. The number is saved per device per browser.
 
 ---
 
@@ -152,27 +157,34 @@ Add any page to the home screen so it opens fullscreen, without the browser bar:
 
 Each page installs as its own app (Live, Stand, Personal, History). Icons and manifests live in `icon-*.png`, `apple-touch-icon.png` and `manifest-*.json` — keep them in the repo root.
 
-Note: on iPhone an installed app has its own storage, separate from Safari, so it will ask again for your name / taxi number and remember its own tile-size setting.
+Note: on iPhone an installed app has its own storage, separate from Safari. It asks for your taxi number again, needs a fresh dispatcher sign-in on the stand, and remembers its own tile-size and light/dark settings. The same applies when you switch to a new web address (for example from GitHub Pages to a home-PC address): add the app to the Home Screen again.
 
 ---
 
 ## Gear Menu
 
-The gear in the top right holds **Bigger/Smaller Tiles**, **Light Mode / Dark Mode** (remembered on that device), **Clear all** (two taps to confirm) and, on the stand when signed in, **Log out**. `index.html` has the gear too, with just tile size and light/dark mode. Tap anywhere else to close it. In light mode the iPhone status bar switches to the light style too; in the installed app that may only update after you close and reopen it.
+The gear in the top right opens a small menu. Tap anywhere else to close it.
 
-## Tile Size
+| Item | `stand.html` | `personal.html` | `index.html` |
+|------|:-:|:-:|:-:|
+| **Bigger / Smaller Tiles** — toggles 10 columns or 5 columns per row; re-measured when you rotate the phone | ✓ | ✓ | ✓ |
+| **Light Mode / Dark Mode** | ✓ | ✓ | ✓ |
+| **Clear all** (two taps; Undo restores) | ✓ | ✓ | |
+| **Log out** (when signed in) | ✓ | | |
 
-Open the **gear menu** (top right) and tap **Bigger Tiles / Smaller Tiles** to toggle between 10 columns and 5 columns . The preference is saved per device per browser. Tile size is re-measured when you rotate the phone.
+Tile size and light/dark are remembered per device per browser. In light mode the iPhone status bar switches to the light style too; in the installed app that may only update after you close and reopen it. Pop-ups (sign-in, 10-11 request, taxi-number box) stay dark. `history.html` has no gear and stays dark.
 
 ---
 
 ## Live Sync (`stand.html` and `index.html`)
 
-Powered by [Firebase Realtime Database](https://firebase.google.com/products/realtime-database). Any change made in `stand.html` appears on all open instances within milliseconds.
+Any change made in `stand.html` appears on all open instances within milliseconds. On the default version this is [Firebase Realtime Database](https://firebase.google.com/products/realtime-database); on the home-PC version it is the server.
 
-A **LIVE / SAVING… / OFFLINE** indicator appears in the top right corner. `index.html` closes its connection after 20 seconds in the background and reconnects when reopened, to stay under Firebase's free limit of 100 simultaneous connections.
+A **LIVE / SAVING… / OFFLINE** indicator appears in the top right corner (on the stand it reads **SIGN IN** while signed out). `index.html` closes its connection after 20 seconds in the background and reconnects when reopened, so idle phones don't count against Firebase's free limit of 100 simultaneous connections.
 
-The first time you make a change on `stand.html` on a new device, a **Your name** box appears with its own on-screen keyboard (letters, numbers, space, `-`, `'`, `.`; up to 20 characters). This name appears in the change history. Changes made before you enter a name are held and logged under it once you tap **Save**; **Skip** logs them as "Unknown" and asks again next time.
+### Dispatcher sign-in (`stand.html`)
+
+Anyone can open `stand.html`, but changes only save for a signed-in dispatcher. A sign-in box (email or name + password, typed on its own on-screen keyboard) covers the page until you sign in; it also offers **View queue** and **Personal queue** buttons for people who just want to look. The account name is what History shows next to each change. Sign out from the gear menu. Sessions last until you sign out (30 days on the home-PC version).
 
 ---
 
@@ -189,43 +201,37 @@ Every action on `stand.html` is logged:
 | **10-11** | Taxi removed via a 10-11 request from the live view |
 | **Undo** | A change was reversed with the Undo button |
 
-Entries show the taxi number, device name, and a relative timestamp. Filter by action type or search by taxi number or device name. Anyone with the link can view it. Clear All needs a dispatcher sign-in and a second tap to confirm.
+Entries show the taxi number, who made the change (the dispatcher's account name and device type), and a relative timestamp. Filter by action type or search by taxi number or name. Anyone with the link can view it. Clear All needs a dispatcher sign-in and a second tap to confirm.
 
 ---
 
 ## Personal Mode (`personal.html`)
 
-Identical to `stand.html` but stores data in the browser's localStorage instead of Firebase. No sync, no history, no device name box. Shows **SAVED** instead of LIVE. Asks for your taxi number (same on-page dial pad as `index.html`) to highlight your tile. Useful for personal tracking that doesn't affect the shared queue.
+Identical to `stand.html` but stores data in the browser's localStorage instead of Firebase. No sync, no history, no sign-in. Shows **SAVED** instead of LIVE. Asks for your taxi number (same on-page dial pad as `index.html`) to highlight your tile. Useful for personal tracking that doesn't affect the shared queue.
 
 ---
 
-## Firebase Setup
+## Firebase Version: Security and Setup
 
-The app uses Firebase Realtime Database at:
-```
-https://taxi-queue-3e591-default-rtdb.firebaseio.com
-```
-
-See **Security** below for the database rules.
-
----
-
-## Security
+The default version uses Firebase Realtime Database at `https://taxi-queue-3e591-default-rtdb.firebaseio.com`.
 
 - Everyone can **read** the queue and history (drivers use `index.html` with no login).
-- Only signed-in **dispatchers** can change the queue, highest number, or history. Drivers can still send 10-11 requests.
-- Rules live in `database.rules.json` (documentation copy; the live copy is pasted into the Firebase console → Realtime Database → Rules).
-- Login code: `taxi-auth.js`; project settings: `taxi-config.js`. Until a real API key is in `taxi-config.js`, login is off and the pages behave as before.
+- Only signed-in **dispatchers** can change the queue, highest number, or history. Anyone can still send a 10-11 request.
+- The rules live in `database.rules.json` (a documentation copy; the live copy is pasted into the Firebase console → Realtime Database → Rules).
+- The web `apiKey` in `taxi-config.js` is not a secret; the rules and dispatcher list are what protect the data. Until a real key is in `taxi-config.js`, login is off.
 
 ### Setup (once)
-1. Firebase console → **Authentication** → Get started → enable **Email/Password**. Also turn off any "allow users to sign up" option if shown.
+1. Firebase console → **Authentication** → Get started → enable **Email/Password**. Turn off any "allow users to sign up" option if shown.
 2. Authentication → Users → **Add user** for each dispatcher. Copy each user's **UID**.
 3. Realtime Database → Data: add `dispatchers` → `<UID>` = `true` for each dispatcher.
 4. Project settings → General → Your apps → web app → copy `apiKey` into `taxi-config.js`, upload it, wait ~30 s, and confirm you can sign in on `stand.html`.
 5. **Last:** paste `database.rules.json` into Rules and Publish. (Doing this before step 4 locks the stand out.)
-6. Optional: Google Cloud console → Credentials → restrict the browser key to `https://kobitz.github.io/*`.
+6. Optional: Google Cloud console → Credentials → restrict the browser key to your site address.
 
 To remove a dispatcher: delete their `dispatchers/<UID>` entry (and the user).
+
+### Using this for your own team
+A copy of this repo still points at the original Firebase project. Either use the home-PC version (nothing to change), or create your own Firebase project and, in `taxi-config.js`, replace `apiKey`, `authDomain`, `databaseURL` and `projectId` with yours, then do the setup above. Change the hosted address in the Deployment section too.
 
 ---
 
@@ -235,6 +241,15 @@ The same pages can run against a small server on a Windows PC (no Firebase, no d
 
 ## Deployment
 
-Hosted via GitHub Pages from the `main` branch root of `kobitz/taxi-queue`.
+Hosted via GitHub Pages from the `main` branch root of `kobitz/taxi-queue`, at `https://kobitz.github.io/taxi-queue`.
 
-To update any page, edit the file directly on GitHub and commit. Changes go live within ~30 seconds.
+To update any page, edit the file directly on GitHub and commit. Changes go live within ~30 seconds. Uploading a whole folder (such as `server/`) works by dragging it onto GitHub's upload page.
+
+**Cache versions.** Phones cache scripts and styles, so shared files are loaded as `file?v=N`. When you change one of these files, bump its `v=` number wherever it is referenced so phones fetch the new copy:
+
+| File | Referenced in |
+|------|---------------|
+| `taxi-editor.js`, `taxi-editor.css` | `stand.html`, `personal.html` |
+| `taxi-auth.js` | `taxi-editor.js`, `history.html` |
+| `taxi-sound.js` | `taxi-editor.js`, `taxi-auth.js`, `index.html` |
+| `taxi-local.js` | `taxi-config.js` and the copy of it that `server/server.js` hands out |

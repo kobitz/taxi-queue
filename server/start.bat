@@ -11,6 +11,12 @@ rem The control page opens in your browser the first time only (not after an aut
 set OPEN_ADMIN=1
 :loop
 node server.js
+if %errorlevel%==2 (
+  echo.
+  echo The server could not start (see the message above^). It will not restart by itself.
+  pause
+  exit /b 2
+)
 set OPEN_ADMIN=0
 echo.
 echo The server stopped. Restarting in 5 seconds. Close this window to stop it for good.
