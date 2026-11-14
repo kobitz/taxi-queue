@@ -704,12 +704,11 @@ function cancelReplace() {
   if (replaceIdx >= 0) { replaceIdx = -1; document.querySelectorAll('.tile.replace-target').forEach(t => t.classList.remove('replace-target')); }
   if (padMode === 'replace') { padMode = 'add'; padValue = ''; padRender(); }
 }
+const padDrawer = document.getElementById('pad-drawer');
 function showTab(which) {
   const pad = which === 'pad';
-  tabPad.classList.toggle('active', pad); tabNQ.classList.toggle('active', !pad);
-  padPanel.style.display = pad ? 'block' : 'none';
-  pGrid.style.display = pad ? 'none' : '';
-  if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
+  padDrawer.classList.toggle('open', pad);
+  if (!pad) cancelReplace();
 }
 function escapeHtml(t) { return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function padRender(err) {
@@ -722,8 +721,8 @@ function padRender(err) {
   if (err) { padDisplay.textContent = err; return; }
   padDisplay.innerHTML = escapeHtml(padValue) + '<span class="caret"></span>' + (padMode === 'max' ? '<small>HIGHEST #</small>' : rep ? '<small>REPLACE FILLER</small>' : '');
 }
-function openDialpad() { cancelReplace(); padMode = 'add'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
-function openMaxDialpad() { cancelReplace(); padMode = 'max'; padValue = ''; padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+function openDialpad() { cancelReplace(); padMode = 'add'; padValue = ''; padRender(); showTab('pad'); }
+function openMaxDialpad() { cancelReplace(); padMode = 'max'; padValue = ''; padRender(); showTab('pad'); }
 function padSubmit(front) {
   const raw = padValue; if (!raw) return;
   const num = parseInt(raw, 10);
@@ -747,7 +746,7 @@ function padSubmit(front) {
   padRender();
 }
 // If a key press adds a queue row, the pad shifts down — scroll by the same amount so it stays under the finger
-function padKeep(fn) { keepPlace(padPanel, fn); }
+function padKeep(fn) { fn(); }
 function keepPlace(el, fn) {
   const before = el.getBoundingClientRect().top;
   fn();
@@ -779,7 +778,7 @@ function padPress(k) {
 padRender();   // show the blinking cursor before anything is typed
 // Physical keyboard: digits, Backspace, Enter = Add (Replace), Shift+Enter = Add In-Front
 document.addEventListener('keydown', e => {
-  if (document.querySelector('#auth-modal.visible, #num-modal.visible') || padPanel.style.display !== 'block' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (document.querySelector('#auth-modal.visible, #num-modal.visible') || !padDrawer.classList.contains('open') || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest && e.target.closest('input, textarea')) return;
   let k = null;
   if (/^[0-9]$/.test(e.key)) k = e.key;
@@ -789,8 +788,7 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   padKeep(() => padPress(k));
 });
-tabNQ.addEventListener('click', () => showTab('nq'));
-tabPad.addEventListener('click', () => { if (padMode === 'add') padRender(); showTab('pad'); });
+tabPad.addEventListener('click', () => { if (padDrawer.classList.contains('open')) showTab('nq'); else { if (padMode === 'add') padRender(); showTab('pad'); } });
 
 /* ── SELECTED TILE (double-tap to remove) ── */
 let selectedQIdx = -1; // track by queue index, not element ref (DOM rebuilds on render)
@@ -870,7 +868,7 @@ function handleTap(el) {
         cancelReplace();
         replaceIdx = idx; padMode = 'replace'; padValue = '';
         el.classList.add('replace-target');
-        padRender(); showTab('pad'); padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
+        padRender(); showTab('pad');
       } else cancelReplace();
     }
   }
@@ -1023,5 +1021,5 @@ if (!PERSONAL && 'wakeLock' in navigator) {
 
 if (PERSONAL) render();   // stand renders when Firebase answers
 
-// Open on the Dial Pad tab
-showTab('pad');
+// Drawer starts closed
+padRender();
