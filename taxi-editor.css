@@ -172,7 +172,7 @@ body { padding-left:max(var(--pad), env(safe-area-inset-left)); padding-right:ma
 .pad-key.go:active { filter:brightness(1.3); }
 
 /* POOL */
-#pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); }
+#pool-grid { display: grid; grid-template-columns: repeat(10, var(--tile)); gap: var(--gap); margin-left: calc(var(--label-w) + var(--gap)); }   /* indented past the row-label column so Not in Queue columns line up with the queue's columns */
 .tile.pool { background: rgba(128,216,255,.12); border: 1.5px solid rgba(128,216,255,.22); color: rgba(255,255,255,.85); }
 
 /* GHOST */
