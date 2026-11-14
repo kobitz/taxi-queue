@@ -150,8 +150,8 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   .tabs::after { display:none; }
   /* rail: the tab's outline continues up the screen edge, above the tab. Stays visible while the pad is open too. */
   #pad-drawer::before { content:''; position:absolute; top:0; bottom:0; left:calc(34px - 1.5px); width:1.5px; background:var(--tabline); }
-  #pad-panel { display:block; order:0; flex:none; border:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; opacity:1; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none;
-    padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad);
+  #pad-panel { display:block; order:0; flex:none; border:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; opacity:1; pointer-events:auto; transition:none; width:300px; height:100%; overflow:auto; border-bottom:none;
+    padding:8px 0 env(safe-area-inset-bottom) var(--pad);   /* no right safe-area padding: the keypad runs to the screen edge, same as the tab */
     --paddisp-h:11vh; --padkey-h:calc((100vh - 11vh - 8px - 5 * var(--gap, 4px) - env(safe-area-inset-bottom)) / 5); }
 }
 body { padding-left:max(var(--pad), env(safe-area-inset-left)); padding-right:max(var(--pad), env(safe-area-inset-right)); }
