@@ -108,7 +108,7 @@ Two ways, both need a second tap to confirm:
 
 ## Dial Pad
 
-The **Dial Pad** is an on-page number pad, so the phone's built-in keyboard never pops up. It's a drawer fixed to the screen with a handle that stays visible: upright, it slides up from the bottom over the Not in Queue list; in landscape on a phone, it slides out from the right edge over the queue (the label rotates). Tap the handle, the **+** tile or a filler to open it. It never closes by itself, not even after Add; tap the handle again to close it.
+The **Dial Pad** is an on-page number pad, so the phone's built-in keyboard never pops up. It's a drawer with a half-hexagon handle. Upright, the handle hangs off the line above "Not in Queue" and the pad drops down over that list; in landscape on a phone, the handle sits on the right screen edge (label rotated) and the pad slides out over the queue. Tap the handle, the **+** tile or a filler to open it. It never closes by itself, not even after Add; tap the handle again to close it.
 
 | Key | Action |
 |-----|--------|
