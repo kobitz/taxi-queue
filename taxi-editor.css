@@ -1,5 +1,6 @@
 /* Shared styles for stand.html and personal.html */
 :root {
+  --tabline: rgba(128,216,255,.3);
   --bg: #2d1b69;
   --stand: #1565c0;
   --holding: #6a1b9a;
@@ -118,7 +119,7 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 .tabs { display:flex; flex-wrap:wrap; align-items:flex-start; margin:14px 0 8px; }
 .tabs h2 { margin:0; padding:9px 26px; position:relative; isolation:isolate; opacity:.9; cursor:default; border:0; }
 #tab-nq::before, #tab-pad::before, #tab-nq::after, #tab-pad::after { content:''; position:absolute; inset:0; }
-#tab-nq::before, #tab-pad::before { z-index:-2; background:var(--highlight); }
+#tab-nq::before, #tab-pad::before { z-index:-2; background:var(--tabline); }
 #tab-nq::after, #tab-pad::after { z-index:-1; background:var(--bg); }
 #tab-nq::before { clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 100%,0 100%); }
 #tab-nq::after  { clip-path:polygon(13.4px 1.5px,calc(100% - 13.4px) 1.5px,calc(100% - 1.4px) 100%,1.4px 100%); }
@@ -126,8 +127,9 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 #tab-pad::before { clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,12px 100%); }
 #tab-pad::after  { clip-path:polygon(1.4px 0,calc(100% - 1.4px) 0,calc(100% - 13.4px) calc(100% - 1.5px),13.4px calc(100% - 1.5px)); }
 #pad-anchor, #pad-drawer { display:contents; }   /* portrait: tab and keypad are plain items of the tab row */
-#pad-panel { display:none; order:-1; flex:0 0 100%; box-sizing:border-box; margin:0 0 14px; }   /* keypad sits above the tab row: tapping Dial Pad pushes the whole row down */
-.tabs::after { content:''; flex:1 1 0; height:1.5px; background:var(--highlight); opacity:.9; }   /* line from the top of Dial Pad to the right edge */
+#pad-panel { display:none; order:-1; flex:0 0 100%; box-sizing:border-box; margin:0 0 8px; }   /* keypad sits above the tab row: tapping Dial Pad pushes the whole row down */
+.tabs::after { content:''; flex:1 1 0; height:1.5px; background:var(--tabline); }
+.tabs.pad-open::after { display:none; }   /* open: Dial Pad tab and keypad read as one shape */   /* line from the top of Dial Pad to the right edge */
 #pad-drawer.open #pad-panel { display:block; }
 @media (orientation:landscape) and (max-height:600px) {
   #pad-drawer { display:flex; margin:0; transition:transform .25s ease; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:center;
@@ -138,7 +140,7 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(0 100%,0 0,calc(100% - 1.5px) 17.6px,calc(100% - 1.5px) calc(100% - 17.6px)); }
   .tabs::after { display:none; }
   #pad-panel { order:0; flex:none; border-bottom:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none; border-left:1.5px solid rgba(128,216,255,.35);
-    box-shadow:-6px 0 20px rgba(0,0,0,.4); padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad); display:flex; flex-direction:column; justify-content:flex-end;
+    padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad); display:flex; flex-direction:column; justify-content:flex-end;
     --paddisp-h:11vh; --padkey-h:calc((100vh - 11vh - 8px - 5 * var(--gap, 4px) - env(safe-area-inset-bottom)) / 5); }
 }
 body { padding-left:max(var(--pad), env(safe-area-inset-left)); padding-right:max(var(--pad), env(safe-area-inset-right)); }
@@ -241,7 +243,7 @@ body { padding-left:max(var(--pad), env(safe-area-inset-left)); padding-right:ma
 .caret { display:inline-block; width:2px; height:.95em; margin-left:2px; vertical-align:-.1em; background:currentColor; }
 
 /* ── LIGHT MODE (gear menu → Light Mode; popups stay dark) ── */
-html.light { --bg:#f1f4fb; --highlight:#1565c0; --overflow:rgba(21,101,192,.12); --empty:rgba(20,30,80,.06); }
+html.light { --tabline:rgba(21,101,192,.3); --bg:#f1f4fb; --highlight:#1565c0; --overflow:rgba(21,101,192,.12); --empty:rgba(20,30,80,.06); }
 html.light body { color:#1a1a3a; }
 html.light .divider { background:linear-gradient(90deg,transparent,rgba(21,101,192,.3),transparent); }
 html.light .row-label { color:rgba(21,101,192,.8); }

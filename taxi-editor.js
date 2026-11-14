@@ -726,7 +726,9 @@ function showTab(which) {
   if (pad && !padLand.matches) { padDrawer.classList.add('open'); padTopOpen = padClamp(true); }
   else padDrawer.classList.toggle('open', pad);
   padPlace();
-  if (!pad) cancelReplace();
+  document.querySelector('.tabs').classList.toggle('pad-open', pad);
+  if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
+  else if (!padLand.matches) padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 window.addEventListener('scroll', padPlace, { passive:true });
 window.addEventListener('resize', padPlace);
