@@ -705,11 +705,32 @@ function cancelReplace() {
   if (padMode === 'replace') { padMode = 'add'; padValue = ''; padRender(); }
 }
 const padDrawer = document.getElementById('pad-drawer');
+const padLand = window.matchMedia('(orientation:landscape) and (max-height:600px)');
+const padDivider = document.querySelector('.divider');
+let padTopOpen = 0;
+// Portrait: the drawer is fixed to the screen; its tab sits on the divider line while that is visible, otherwise it sticks to the screen edge
+function padPlace() {
+  if (padLand.matches) { padDrawer.style.top = ''; return; }
+  const open = padDrawer.classList.contains('open');
+  if (open) { padDrawer.style.top = padTopOpen + 'px'; return; }
+  padDrawer.style.top = padClamp(false) + 'px';
+}
+function padClamp(open) {
+  const y = padDivider ? padDivider.getBoundingClientRect().top : 0;
+  const h = open ? padDrawer.offsetHeight : 34;
+  return Math.max(0, Math.min(y, window.innerHeight - h));
+}
 function showTab(which) {
   const pad = which === 'pad';
-  padDrawer.classList.toggle('open', pad);
+  if (pad && !padLand.matches) { padDrawer.classList.add('open'); padTopOpen = padClamp(true); }
+  else padDrawer.classList.toggle('open', pad);
+  padPlace();
   if (!pad) cancelReplace();
 }
+window.addEventListener('scroll', padPlace, { passive:true });
+window.addEventListener('resize', padPlace);
+padLand.addEventListener && padLand.addEventListener('change', padPlace);
+if (window.ResizeObserver) new ResizeObserver(padPlace).observe(document.body);
 function escapeHtml(t) { return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function padRender(err) {
   const rep = padMode === 'replace';
@@ -746,7 +767,7 @@ function padSubmit(front) {
   padRender();
 }
 // If a key press adds a queue row, the pad shifts down — scroll by the same amount so it stays under the finger
-function padKeep(fn) { fn(); }
+function padKeep(fn) { keepPlace(padPanel, fn); }
 function keepPlace(el, fn) {
   const before = el.getBoundingClientRect().top;
   fn();
@@ -1022,4 +1043,4 @@ if (!PERSONAL && 'wakeLock' in navigator) {
 if (PERSONAL) render();   // stand renders when Firebase answers
 
 // Drawer starts closed
-padRender();
+padRender(); padPlace();

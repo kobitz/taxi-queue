@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<link rel="manifest" href="manifest-personal.json">
+<link rel="manifest" href="manifest-stand.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#2d1b69">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Personal">
-<title>Taxi Stand — Personal</title>
-<link rel="stylesheet" href="taxi-editor.css?v=13">
+<meta name="apple-mobile-web-app-title" content="Stand">
+<title>Taxi Stand Queue</title>
+<link rel="stylesheet" href="taxi-editor.css?v=14">
 <script>try{if(localStorage.getItem('taxi-theme')==='light'){document.documentElement.classList.add('light');document.querySelector('meta[name="theme-color"]').content='#f1f4fb';document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content='default'}}catch(e){}</script>
 </head>
 <body>
@@ -24,7 +24,7 @@
   <button id="logout-btn" class="menu-item">Log out</button>
 </div>
 
-<div id="sync-status" class="ok">SAVED</div>
+<div id="sync-status" class="ok">LIVE</div>
 
 <section>
   <div class="qhead"><h2>Queue</h2><button id="undo-btn" disabled>↶ Undo</button></div>
@@ -54,22 +54,20 @@
 
 </section>
 
-<div id="num-modal">
-  <div class="num-card">
-    <div class="num-title">Your taxi number</div>
-    <div class="num-sub">Your tile is highlighted in the queue</div>
-    <div id="num-display">_</div>
-    <div id="num-err"></div>
-    <div id="num-keys"></div>
-    <div class="num-btns">
-      <button class="num-btn num-skip" id="num-skip">Skip</button>
+<div id="req1011-modal">
+  <div class="req1011-card">
+    <div class="req1011-title">10-11 Request</div>
+    <div class="req1011-msg" id="req1011-msg"></div>
+    <div class="req1011-btns">
+      <button class="req1011-btn req1011-ok"   id="req1011-ok">OK</button>
+      <button class="req1011-btn req1011-undo" id="req1011-undo">Undo</button>
     </div>
   </div>
 </div>
 
 <div id="ghost"></div>
 
-<script>window.TAXI_MODE = 'personal';</script>
-<script type="module" src="taxi-editor.js?v=10"></script>
+<script>window.TAXI_MODE = 'stand';</script>
+<script type="module" src="taxi-editor.js?v=11"></script>
 </body>
 </html>
