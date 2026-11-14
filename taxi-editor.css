@@ -138,6 +138,8 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   #pad-drawer.open #pad-panel { height:auto; margin-bottom:8px; visibility:visible; opacity:1;
     transition:height var(--pad-dur) var(--pad-ease), margin-bottom var(--pad-dur) var(--pad-ease), opacity .12s ease, visibility 0s; }
 }
+/* Wide screens (desktop, tablets): keep the keypad a natural size instead of stretching across the window */
+@media (min-width:700px) { #pad-display, #pad-keys { max-width:320px; } }
 @media (orientation:landscape) and (max-height:600px) {
   /* Drawer is pinned to the bottom of the screen: the Dial Pad tab and the keypad both sit on the bottom edge. */
   #pad-drawer { display:flex; margin:0; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:flex-end;
