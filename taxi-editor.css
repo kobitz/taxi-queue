@@ -125,9 +125,9 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 #tab-pad { margin-left:-12px; cursor:pointer; user-select:none; }
 #tab-pad::before { clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,12px 100%); }
 #tab-pad::after  { clip-path:polygon(1.4px 0,calc(100% - 1.4px) 0,calc(100% - 13.4px) calc(100% - 1.5px),13.4px calc(100% - 1.5px)); }
-#pad-drawer.open #tab-pad::after { clip-path:polygon(1.4px 0,calc(100% - 1.4px) 0,calc(100% - 13.4px) 100%,13.4px 100%); }   /* open: tab runs on into the keypad */
 #pad-anchor, #pad-drawer { display:contents; }   /* portrait: tab and keypad are plain items of the tab row */
-#pad-panel { display:none; order:2; flex:0 0 100%; box-sizing:border-box; margin:10px 0 14px; padding-bottom:12px; border-bottom:1.5px solid var(--highlight); }
+#pad-panel { display:none; order:-1; flex:0 0 100%; box-sizing:border-box; margin:0 0 14px; }   /* keypad sits above the tab row: tapping Dial Pad pushes the whole row down */
+.tabs::after { content:''; flex:1 1 0; height:1.5px; background:var(--highlight); opacity:.9; }   /* line from the top of Dial Pad to the right edge */
 #pad-drawer.open #pad-panel { display:block; }
 @media (orientation:landscape) and (max-height:600px) {
   #pad-drawer { display:flex; margin:0; transition:transform .25s ease; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:center;
@@ -136,6 +136,7 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   #tab-pad { writing-mode:vertical-rl; width:34px; padding:44px 0; margin:0; display:flex; align-items:center; justify-content:center; opacity:.9; }
   #tab-pad::before, #pad-drawer.open #tab-pad::before { clip-path:polygon(100% 0,100% 100%,0 calc(100% - 17px),0 17px); }
   #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(100% 0,100% 100%,1.5px calc(100% - 17.6px),1.5px 17.6px); }
+  .tabs::after { display:none; }
   #pad-panel { order:0; flex:none; border-bottom:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none; border-left:1.5px solid rgba(128,216,255,.35);
     box-shadow:-6px 0 20px rgba(0,0,0,.4); padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad); display:flex; flex-direction:column; justify-content:flex-end;
     --paddisp-h:11vh; --padkey-h:calc((100vh - 11vh - 8px - 5 * var(--gap, 4px) - env(safe-area-inset-bottom)) / 5); }
