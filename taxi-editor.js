@@ -6,7 +6,7 @@ const PERSONAL = window.TAXI_MODE === 'personal';
 const STORAGE_KEY = 'taxi-queue-personal';
 
 /* ── FIREBASE (stand only; personal never touches the network) ── */
-import { computeStats, fmtWait } from './taxi-stats.js?v=1';
+import { computeStats, loadInterval, etaToHolding, fmtWait } from './taxi-stats.js?v=2';
 let fb = {}, db = null, queueRef = null, historyRef = null, maxRef = null, request1011Ref = null;
 let auth = { enabled: false, user: () => null, label: () => '', requireSignIn: async () => null, signOut: async () => {}, onChange() {} };
 if (!PERSONAL) {
@@ -53,10 +53,19 @@ function getFullDeviceLabel() {
 
 /* ── LOG CHANGE ── */
 const statsOwn = [];
+// Personal mode keeps its own small log in this browser (never sent anywhere) so the info tiles have something to work from.
+const PERSONAL_LOG_KEY = 'taxi-personal-log', PERSONAL_LOG_KEEP = 36 * 3600 * 1000;
+if (PERSONAL) {
+  try {
+    const old = JSON.parse(localStorage.getItem(PERSONAL_LOG_KEY) || '[]');
+    if (Array.isArray(old)) statsOwn.push(...old.filter(e => e && typeof e.ts === 'number' && e.ts > Date.now() - PERSONAL_LOG_KEEP).slice(-500));
+  } catch (e) {}
+}
 function logChange(action, value) {
-  if (PERSONAL || value === 'Filler') return;
-  const entry = { action, value: String(value), device: getFullDeviceLabel(), ts: Date.now() };
+  if (value === 'Filler') return;
+  const entry = { action, value: String(value), device: PERSONAL ? 'personal' : getFullDeviceLabel(), ts: Date.now() };
   statsOwn.push(entry); if (statsOwn.length > 500) statsOwn.shift();   // also feeds the stat tiles (own writes may not echo back)
+  if (PERSONAL) { try { localStorage.setItem(PERSONAL_LOG_KEY, JSON.stringify(statsOwn)); } catch (e) {} return; }
   fb.push(historyRef, entry).catch(onWriteError);
 }
 function onWriteError(e) {
@@ -743,7 +752,7 @@ const statsEl = document.getElementById('pad-stats');
 const statsWide = window.matchMedia('(min-width:900px) and (min-height:601px)');
 let statsHist = [], statsUnsub = null, statsTimer = 0;
 function statsStart() {                       // first time the pad opens on a wide screen: start reading the history log
-  if (!statsEl || PERSONAL || !historyRef || statsUnsub) return;
+  if (!statsEl || PERSONAL || !historyRef || statsUnsub) return;   // personal has no shared log: it works from statsOwn (this browser's own log) alone
   const r = fb.query ? fb.query(historyRef, fb.limitToLast(1500)) : historyRef;
   statsUnsub = fb.onValue(r, snap => { statsHist = Object.values(snap.val() || {}); statsDraw(); }, () => {});
 }
@@ -758,6 +767,16 @@ function statsDraw() {
   document.getElementById('st-hour').textContent = s.hour;
   document.getElementById('st-today').textContent = s.today;
   document.getElementById('st-wait').textContent = fmtWait(s.avgWait);
+  etaDraw(all);
+}
+// "Est. time till holding" tile (personal only: it needs your taxi number)
+const ETA_NOTE = { nonumber: 'Set your taxi number', notin: 'Not in the queue', unknown: 'Not enough loads yet' };
+function etaDraw(all) {
+  const v = document.getElementById('st-eta'), sub = document.getElementById('st-eta-sub');
+  if (!v || !sub) return;
+  const r = etaToHolding(queue, myNumber, loadInterval(all, Date.now()));
+  v.textContent = r.state === 'eta' ? fmtWait(r.ms) : r.state === 'stand' ? 'At stand' : r.state === 'holding' ? 'In holding' : '–';
+  sub.textContent = ETA_NOTE[r.state] || ('#' + myNumber + ' · position ' + r.pos);
 }
 function statsToggle(open) {
   clearInterval(statsTimer);

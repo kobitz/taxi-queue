@@ -24,6 +24,7 @@
     --r: 6px;
     --label-w: 26px;
     --pad: 10px;
+    --tabline: rgba(128,216,255,.3);
     --grphdr-h: 18px;
     --colhdr-h: 20px;
   }
@@ -101,6 +102,27 @@
   .q-zero.req-armed   { box-shadow: 0 0 0 2px #ffd600; color: #ffd600; }
   .q-zero.req-confirm { box-shadow: 0 0 0 2px #ff5555; color: #ff5555; }
 
+  /* TIME-TILL-HOLDING TAB — same folder-tab look and slide-down as the Dial Pad tab on the stand */
+  #eta-wrap { display:flex; flex-wrap:wrap; align-items:flex-start; margin:14px 0 8px; }
+  #eta-wrap::after { content:''; flex:1 1 0; height:1.5px; background:var(--tabline); }
+  #tab-eta { margin:0; padding:9px 26px; position:relative; isolation:isolate; opacity:.9; cursor:pointer; user-select:none; border:0; }
+  #tab-eta::before, #tab-eta::after { content:''; position:absolute; inset:0; }
+  #tab-eta::before { z-index:-2; background:var(--tabline); clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,12px 100%); }
+  #tab-eta::after  { z-index:-1; background:var(--bg); clip-path:polygon(1.4px 0,calc(100% - 1.4px) 0,calc(100% - 13.4px) calc(100% - 1.5px),13.4px calc(100% - 1.5px)); }
+  #eta-panel { order:-1; flex:0 0 100%; box-sizing:border-box; height:0; overflow:hidden; visibility:hidden; opacity:0; margin:0;
+    transition:height .32s cubic-bezier(.16,1,.3,1), margin-bottom .32s cubic-bezier(.16,1,.3,1), opacity .18s ease, visibility 0s linear .32s; }
+  #eta-wrap.open #eta-panel { height:auto; margin-bottom:8px; visibility:visible; opacity:1;
+    transition:height .32s cubic-bezier(.16,1,.3,1), margin-bottom .32s cubic-bezier(.16,1,.3,1), opacity .12s ease, visibility 0s; }
+  .eta-tile { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:96px; padding:10px; border-radius:var(--r);
+    background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22); }
+  .eta-v { font-size:clamp(28px,8vw,44px); font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+  .eta-l { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--highlight); opacity:.85; text-align:center; }
+  .eta-s { font-size:12px; font-weight:600; opacity:.65; text-align:center; }
+  @media (min-width:700px) and (min-height:601px) { .eta-tile { max-width:320px; margin-left:calc(var(--label-w) + var(--gap)); } }   /* lines up with the tile columns, as the stand's keypad does */
+  html.light #eta-wrap::after { background:rgba(21,101,192,.35); }
+  html.light #tab-eta::before { background:rgba(21,101,192,.35); }
+  html.light .eta-tile { background:rgba(21,101,192,.1); border-color:rgba(21,101,192,.3); }
+
   /* settings menu (gear) */
   #menu-btn { position:fixed; top:6px; right:6px; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center;
     background:none; color:#80d8ff; border:none; border-radius:12px; cursor:pointer; z-index:160; }
@@ -174,6 +196,16 @@
       <div id="queue-grid"></div>
     </div>
   </div>
+  <div id="eta-wrap">
+    <div id="eta-panel">
+      <div class="eta-tile">
+        <div class="eta-v" id="eta-v">–</div>
+        <div class="eta-l">Est. time till holding</div>
+        <div class="eta-s" id="eta-s"></div>
+      </div>
+    </div>
+    <h2 id="tab-eta" role="button" aria-expanded="false">Time till Holding</h2>
+  </div>
 </section>
 
 
@@ -192,15 +224,17 @@
 
 <script type="module">
 import { tick } from './taxi-sound.js?v=1';
+import { loadInterval, etaToHolding, fmtWait } from './taxi-stats.js?v=2';
 const { SDK, FIREBASE_CONFIG } = await import('./taxi-config.js');   // Firebase on GitHub Pages, or the home-PC server
 const { initializeApp } = await import(SDK.app);
-const { getDatabase, ref, onValue, set, goOffline, goOnline } = await import(SDK.db);
+const { getDatabase, ref, onValue, set, goOffline, goOnline, query, limitToLast } = await import(SDK.db);
 
 const app = initializeApp(FIREBASE_CONFIG);
 const db       = getDatabase(app);
 const queueRef = ref(db, 'queue');
 const maxRef          = ref(db, 'maxNum');
 const request1011Ref  = ref(db, 'request1011');
+const historyRef      = ref(db, 'history');
 
 const syncEl = document.getElementById('sync-status');
 const updatedEl = document.getElementById('updated');
@@ -378,7 +412,38 @@ const qColHdrs   = document.getElementById('col-headers');
 const qRowLabels = document.getElementById('row-labels');
 
 /* ── RENDER ── */
-function render() { renderQueue(); }
+/* ── TIME TILL HOLDING (drop-down tab under the queue) ── */
+const etaWrap = document.getElementById('eta-wrap'), etaPanel = document.getElementById('eta-panel'), etaTab = document.getElementById('tab-eta');
+let etaHist = [], etaUnsub = null, etaTimer = 0, etaAnimT = 0;
+const ETA_NOTE = { nonumber: 'Set your taxi number', notin: 'Not in the queue', unknown: 'Not enough loads yet' };
+function etaDraw() {
+  if (!etaWrap.classList.contains('open')) return;
+  const r = etaToHolding(queue, myNumber, loadInterval(etaHist, Date.now()));
+  document.getElementById('eta-v').textContent = r.state === 'eta' ? fmtWait(r.ms) : r.state === 'stand' ? 'At stand' : r.state === 'holding' ? 'In holding' : '–';
+  document.getElementById('eta-s').textContent = ETA_NOTE[r.state] || ('#' + myNumber + ' · position ' + r.pos);
+}
+function etaStart() {                      // first time the tab opens: read the recent history to see how fast taxis are loading
+  if (etaUnsub) return;
+  try {
+    const r = query ? query(historyRef, limitToLast(400)) : historyRef;
+    etaUnsub = onValue(r, snap => { etaHist = Object.values(snap.val() || {}); etaDraw(); }, () => {});
+  } catch (e) {}
+}
+function etaToggle() {
+  const open = !etaWrap.classList.contains('open');
+  clearTimeout(etaAnimT);
+  etaPanel.style.height = etaPanel.offsetHeight + 'px';   // slide from wherever it is now (same technique as the stand's dial pad)
+  void etaPanel.offsetHeight;
+  etaWrap.classList.toggle('open', open);
+  etaTab.setAttribute('aria-expanded', open);
+  etaPanel.style.height = (open ? etaPanel.scrollHeight : 0) + 'px';
+  etaAnimT = setTimeout(() => { etaPanel.style.height = ''; if (open) etaPanel.scrollIntoView({ block:'nearest', behavior:'smooth' }); }, 340);
+  clearInterval(etaTimer);
+  if (open) { etaStart(); etaDraw(); etaTimer = setInterval(etaDraw, 30000); }
+}
+etaTab.addEventListener('click', etaToggle);
+
+function render() { renderQueue(); etaDraw(); }
 
 function renderQueue() {
   const qLen = queue.length;

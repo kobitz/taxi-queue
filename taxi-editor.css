@@ -151,6 +151,12 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   .stat-v { font-size:clamp(28px,4vw,52px); font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
   .stat-l { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--highlight); opacity:.85; text-align:center; }
   html.light .stat { background:rgba(21,101,192,.1); border-color:rgba(21,101,192,.3); }
+  /* personal: a fifth, full-width tile (Est. time till holding) as a third row; the block stays as tall as the keypad */
+  #pad-stats.has-eta { grid-template-rows:1fr 1fr 1fr; }
+  .stat.wide { grid-column:1 / -1; }
+  .stat-s { font-size:12px; font-weight:600; opacity:.65; text-align:center; margin-top:-2px; }
+  #pad-stats.has-eta .stat { gap:4px; }
+  #pad-stats.has-eta .stat-v { font-size:clamp(24px,3.2vw,40px); }
 }   /* line up with the tile columns (past the row-label column), as the Not in Queue grid does */
 @media (orientation:landscape) and (max-height:600px) {
   /* Drawer is pinned to the bottom of the screen: the Dial Pad tab and the keypad both sit on the bottom edge. */
