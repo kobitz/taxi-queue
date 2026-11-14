@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Personal">
 <title>Taxi Stand — Personal</title>
-<link rel="stylesheet" href="taxi-editor.css?v=16">
+<link rel="stylesheet" href="taxi-editor.css?v=18">
 <script>try{if(localStorage.getItem('taxi-theme')==='light'){document.documentElement.classList.add('light');document.querySelector('meta[name="theme-color"]').content='#f1f4fb';document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content='default'}}catch(e){}</script>
 </head>
 <body>
@@ -40,16 +40,15 @@
 
 <div class="divider"></div>
 
-<div id="pad-anchor"><div id="pad-drawer">
+
+<section>
+  <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2><div id="pad-anchor"><div id="pad-drawer">
   <div id="pad-panel">
     <div id="pad-display">_</div>
     <div id="pad-keys"></div>
   </div>
   <h2 id="tab-pad">Dial Pad</h2>
-</div></div>
-
-<section>
-  <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2></div>
+</div></div></div>
   <div id="pool-grid"></div>
 
 </section>
