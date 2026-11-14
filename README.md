@@ -51,7 +51,7 @@ Column labels (1–9) and group labels (Stand / Holding) appear above the grid.
 
 Taxis not currently in the queue live here, always sorted numerically (1 to the highest taxi number, default 140). Filler In-Front and Filler tiles are always first.
 
-This section has two tabs: **Dial Pad** (see below) and **Not in Queue** (the tile list). `stand.html` and `personal.html` open on the Dial Pad tab.
+This section is the **Not in Queue** tile list. The **Dial Pad** (see below) is a drawer that slides over it; it starts closed.
 
 ---
 
@@ -60,7 +60,7 @@ This section has two tabs: **Dial Pad** (see below) and **Not in Queue** (the ti
 ### Adding to the Queue
 
 - **Tap** any tile in the Not in Queue list to add it to the end of the queue
-- **Tap the "+" tile** (the next open slot in the queue grid) to open the **Dial Pad** tab and type a taxi number (see below)
+- **Tap the "+" tile** (the next open slot in the queue grid) to open the **Dial Pad** drawer and type a taxi number (see below)
 - **Drag** a tile up into a specific position in the queue
 
 ### Removing from the Queue
@@ -81,7 +81,7 @@ Two ways, both need a second tap to confirm:
 
 ### Replacing a Filler with a Number
 
-- **Tap a Filler tile** in the queue — the Dial Pad tab opens, the filler gets a yellow ring, and the display reads "REPLACE FILLER"
+- **Tap a Filler tile** in the queue — the Dial Pad drawer opens, the filler gets a yellow ring, and the display reads "REPLACE FILLER"
 - Type a taxi number and press **Replace** — the filler is swapped for that number in the same position (the number must be valid and not already in the queue)
 - While replacing, the Filler, Filler In-Front and Add In-Front keys are disabled (they would shift the filler's position)
 - **Cancel** by tapping the Not in Queue tab. Tapping a filler a second time right away still removes it, as before
@@ -108,7 +108,7 @@ Two ways, both need a second tap to confirm:
 
 ## Dial Pad
 
-The **Dial Pad** tab (next to "Not in Queue") is an on-page number pad, so the phone's built-in keyboard never pops up. On a phone held upright it spans the full width of the screen; the keys are a fixed size.
+The **Dial Pad** is an on-page number pad, so the phone's built-in keyboard never pops up. It's a drawer fixed to the screen with a handle that stays visible: upright, it slides up from the bottom over the Not in Queue list; in landscape on a phone, it slides out from the right edge over the queue (the label rotates). Tap the handle, the **+** tile or a filler to open it. It never closes by itself, not even after Add; tap the handle again to close it.
 
 | Key | Action |
 |-----|--------|
