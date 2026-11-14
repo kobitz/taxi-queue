@@ -90,7 +90,9 @@ function calcTileSize() {
   const pad = (parseFloat(cs.paddingLeft) || 10) + (parseFloat(cs.paddingRight) || 10);   // includes safe areas and the landscape tab strip
   const labelW = 30;
   const gaps = (COLS-1)*4;
-  const size = Math.floor((document.documentElement.clientWidth - pad - labelW - gaps) / COLS);
+  // Not rounded to whole pixels: tiles are scaled so the grid fills the width exactly (still square, still left-aligned).
+  // Truncated to 1/100 px so rounding can never push the last column past the edge.
+  const size = Math.floor((document.documentElement.clientWidth - pad - labelW - gaps) / COLS * 100) / 100;
   document.documentElement.style.setProperty('--tile', size + 'px');
 }
 calcTileSize();

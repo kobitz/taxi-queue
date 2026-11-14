@@ -286,4 +286,4 @@ html.light .menu-item:active { background:rgba(21,101,192,.15); }
 html.light .menu-item.armed { background:#d32f2f; color:#fff; }
 html.light .tile[style*="180, 180, 180"] { background:rgba(20,30,80,.07) !important; border-color:rgba(20,30,80,.22) !important; color:rgba(20,30,80,.65) !important; }
 html.light .tile[style*="dashed"] { border-color:rgba(21,101,192,.4) !important; color:rgba(21,101,192,.75) !important; background:rgba(21,101,192,.05) !important; }
-@media (orientation:landscape) and (max-height:600px) { body { padding-right:calc(max(var(--pad), env(safe-area-inset-right)) + 34px); } }   /* room for the Dial Pad tab strip */
+@media (orientation:landscape) and (max-height:600px) { body { padding-right:calc(34px + var(--gap) * 2); } }   /* Dial Pad tab strip (34px) + a gap of 2 tile-gaps between it and the tiles. The tab sits on the screen edge, so no safe-area padding here. */
