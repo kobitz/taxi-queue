@@ -131,7 +131,6 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 /* Slide animation. "Lerp" feel: expo-out curve, so it moves fast at first then settles ("clicks") into place. */
 :root { --pad-ease:cubic-bezier(.16,1,.3,1); --pad-dur:.32s; }
 .tabs::after { content:''; flex:1 1 0; height:1.5px; background:var(--tabline); }
-.tabs.pad-open::after { display:none; }   /* open: Dial Pad tab and keypad read as one shape */   /* line from the top of Dial Pad to the right edge */
 @media not all and (orientation:landscape) and (max-height:600px) {   /* portrait: the keypad grows/shrinks in place (JS sets a px height while it animates) */
   #pad-panel { display:block; height:0; overflow:hidden; visibility:hidden; opacity:0;
     transition:height var(--pad-dur) var(--pad-ease), margin-bottom var(--pad-dur) var(--pad-ease), opacity .18s ease, visibility 0s linear var(--pad-dur); }

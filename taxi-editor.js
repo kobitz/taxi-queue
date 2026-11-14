@@ -734,7 +734,6 @@ function showTab(which) {
   } else if (pad) {
     padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
   }
-  document.querySelector('.tabs').classList.toggle('pad-open', pad);
   if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
 }
 function escapeHtml(t) { return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
