@@ -137,9 +137,9 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
   #pad-drawer.open { transform:none; }
   #tab-pad { writing-mode:vertical-rl; width:34px; padding:44px 0; margin:0; display:flex; align-items:center; justify-content:center; opacity:.9; transform:rotate(180deg); }   /* label reads bottom-to-top; outline polygons below are mirrored to compensate */
   #tab-pad::before, #pad-drawer.open #tab-pad::before { clip-path:polygon(0 100%,0 0,100% 17px,100% calc(100% - 17px)); }
-  #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(0 100%,0 0,calc(100% - 1.5px) 17.6px,calc(100% - 1.5px) calc(100% - 17.6px)); }
+  #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(0 calc(100% - 1.7px),0 1.7px,calc(100% - 1.5px) 17.95px,calc(100% - 1.5px) calc(100% - 17.95px)); }
   .tabs::after { display:none; }
-  #pad-panel { order:0; flex:none; border-bottom:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none; border-left:1.5px solid rgba(128,216,255,.35);
+  #pad-panel { order:0; flex:none; border:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none;
     padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad); display:flex; flex-direction:column; justify-content:flex-end;
     --paddisp-h:11vh; --padkey-h:calc((100vh - 11vh - 8px - 5 * var(--gap, 4px) - env(safe-area-inset-bottom)) / 5); }
 }
