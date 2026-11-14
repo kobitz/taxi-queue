@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Stand">
 <title>Taxi Stand Queue</title>
-<link rel="stylesheet" href="taxi-editor.css?v=30">
+<link rel="stylesheet" href="taxi-editor.css?v=31">
 <script>try{if(localStorage.getItem('taxi-theme')==='light'){document.documentElement.classList.add('light');document.querySelector('meta[name="theme-color"]').content='#f1f4fb';document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content='default'}}catch(e){}</script>
 </head>
 <body>
@@ -46,6 +46,12 @@
   <div id="pad-panel">
     <div id="pad-display">_</div>
     <div id="pad-keys"></div>
+    <div id="pad-stats" aria-label="Stand info">
+      <div class="stat"><div class="stat-v" id="st-queue">–</div><div class="stat-l">In queue</div></div>
+      <div class="stat"><div class="stat-v" id="st-hour">–</div><div class="stat-l">Loaded · last hour</div></div>
+      <div class="stat"><div class="stat-v" id="st-today">–</div><div class="stat-l">Loaded · today</div></div>
+      <div class="stat"><div class="stat-v" id="st-wait">–</div><div class="stat-l">Avg wait · today</div></div>
+    </div>
   </div>
   <h2 id="tab-pad">Dial Pad</h2>
 </div></div></div>
@@ -67,6 +73,6 @@
 <div id="ghost"></div>
 
 <script>window.TAXI_MODE = 'stand';</script>
-<script type="module" src="taxi-editor.js?v=18"></script>
+<script type="module" src="taxi-editor.js?v=19"></script>
 </body>
 </html>

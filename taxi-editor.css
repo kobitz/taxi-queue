@@ -139,7 +139,19 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 }
 /* Wide screens (desktop, tablets): keep the keypad a natural size instead of stretching across the window */
 @media (min-width:700px) { #pad-display, #pad-keys { max-width:320px; } }
-@media (min-width:700px) and (min-height:601px) { #pad-display, #pad-keys { margin-left:calc(var(--label-w) + var(--gap)); } }   /* line up with the tile columns (past the row-label column), as the Not in Queue grid does */
+@media (min-width:700px) and (min-height:601px) { #pad-display, #pad-keys { margin-left:calc(var(--label-w) + var(--gap)); } }
+/* Stand info tiles: a 2x2 block to the right of the keypad, as tall as the keypad (each tile half its height). Wide screens only. */
+#pad-stats { display:none; }
+@media (min-width:900px) and (min-height:601px) {
+  #pad-panel { display:grid; grid-template-columns:calc(var(--label-w) + var(--gap) + 320px) minmax(0,560px); column-gap:var(--gap); align-content:start; }
+  #pad-display, #pad-keys { grid-column:1; }
+  #pad-stats { display:grid; grid-column:2; grid-row:1 / span 2; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:var(--gap); }
+  .stat { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-width:0; border-radius:var(--r);
+    background:rgba(128,216,255,.12); border:1.5px solid rgba(128,216,255,.22); }
+  .stat-v { font-size:clamp(28px,4vw,52px); font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+  .stat-l { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--highlight); opacity:.85; text-align:center; }
+  html.light .stat { background:rgba(21,101,192,.1); border-color:rgba(21,101,192,.3); }
+}   /* line up with the tile columns (past the row-label column), as the Not in Queue grid does */
 @media (orientation:landscape) and (max-height:600px) {
   /* Drawer is pinned to the bottom of the screen: the Dial Pad tab and the keypad both sit on the bottom edge. */
   #pad-drawer { display:flex; margin:0; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:flex-end;

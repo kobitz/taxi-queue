@@ -44,6 +44,9 @@ function closeStream() { if (es) { es.close(); es = null; } if (connected) { con
 export const initializeApp = () => ({});
 export const getDatabase = () => ({});
 export const ref = (db, p) => p || '';
+// Queries: the shim already holds the whole database in memory, so these are no-ops that keep the editor code identical on both backends.
+export const query = p => p;
+export const limitToLast = () => null;
 export const serverTimestamp = () => ({ '.sv': 'timestamp' });
 export function onValue(p, cb, err) {
   if (!subs.has(p)) subs.set(p, new Set());

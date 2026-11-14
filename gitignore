@@ -1,0 +1,2 @@
+# Local server data: password hashes, login sessions and the live queue. Never commit these.
+server/data/

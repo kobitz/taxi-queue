@@ -124,6 +124,7 @@ The **Dial Pad** is an on-page number pad, so the phone's built-in keyboard neve
 - **Auto-scroll:** when a key press or a tap in Not in Queue adds a new queue row, the page scrolls by the same amount so the button stays under your finger and you can keep tapping
 - **Physical keyboard** (desktop): while the tab is open, digits type the number, Backspace deletes, **Enter** adds it to the end of the queue (or replaces a filler / saves the highest number), and **Shift+Enter** adds it to the front
 - The same pad is used by the "adjust highest taxi number" tile (display shows "HIGHEST #") and for replacing fillers
+- **Stand info tiles** (`stand.html`, screens at least 900px wide and 601px tall, so desktops and large tablets; never on phones): a 2×2 block to the right of the open Dial Pad showing **In queue** (taxis in the queue now, fillers excluded), **Loaded · last hour**, **Loaded · today** and **Avg wait · today** (average time from a taxi being added to being loaded, marked `~` because it's an estimate). The loaded counts and the wait come from the history log (the last 1500 entries are read the first time the pad opens); an undone load isn't counted, and fillers aren't logged so they aren't included. The block refreshes every 30 seconds so "last hour" keeps rolling. Resets at midnight by the browser's clock.
 
 ---
 

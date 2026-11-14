@@ -6,6 +6,7 @@ const PERSONAL = window.TAXI_MODE === 'personal';
 const STORAGE_KEY = 'taxi-queue-personal';
 
 /* ── FIREBASE (stand only; personal never touches the network) ── */
+import { computeStats, fmtWait } from './taxi-stats.js?v=1';
 let fb = {}, db = null, queueRef = null, historyRef = null, maxRef = null, request1011Ref = null;
 let auth = { enabled: false, user: () => null, label: () => '', requireSignIn: async () => null, signOut: async () => {}, onChange() {} };
 if (!PERSONAL) {
@@ -51,14 +52,12 @@ function getFullDeviceLabel() {
 }
 
 /* ── LOG CHANGE ── */
+const statsOwn = [];
 function logChange(action, value) {
   if (PERSONAL || value === 'Filler') return;
-  fb.push(historyRef, {
-    action,
-    value: String(value),
-    device: getFullDeviceLabel(),
-    ts: Date.now()
-  }).catch(onWriteError);
+  const entry = { action, value: String(value), device: getFullDeviceLabel(), ts: Date.now() };
+  statsOwn.push(entry); if (statsOwn.length > 500) statsOwn.shift();   // also feeds the stat tiles (own writes may not echo back)
+  fb.push(historyRef, entry).catch(onWriteError);
 }
 function onWriteError(e) {
   setSync('error');
@@ -170,6 +169,7 @@ showLogout();
 /* ── STATE ── */
 let MAX_NUM = parseInt(localStorage.getItem('taxi-max-num') || '140');
 let queue = [];
+let updateStatsFn = null;   // set below: refreshes the stat tiles beside the dial pad
 let pool  = new Set();
 for (let i = 1; i <= MAX_NUM; i++) pool.add(i);
 let loadedPrimed = false;
@@ -276,7 +276,7 @@ const pGrid      = document.getElementById('pool-grid');
 const ghostEl    = document.getElementById('ghost');
 
 /* ── RENDER ── */
-function render() { renderQueue(); renderPool(); }
+function render() { renderQueue(); renderPool(); if (updateStatsFn) updateStatsFn(); }
 
 function renderQueue() {
   const qLen = queue.length;
@@ -735,7 +735,35 @@ function showTab(which) {
     padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
   }
   if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
+  statsToggle(pad);
 }
+
+/* ── Stand info tiles (wide screens only): shown beside the open dial pad ── */
+const statsEl = document.getElementById('pad-stats');
+const statsWide = window.matchMedia('(min-width:900px) and (min-height:601px)');
+let statsHist = [], statsUnsub = null, statsTimer = 0;
+function statsStart() {                       // first time the pad opens on a wide screen: start reading the history log
+  if (!statsEl || PERSONAL || !historyRef || statsUnsub) return;
+  const r = fb.query ? fb.query(historyRef, fb.limitToLast(1500)) : historyRef;
+  statsUnsub = fb.onValue(r, snap => { statsHist = Object.values(snap.val() || {}); statsDraw(); }, () => {});
+}
+function statsDraw() {
+  if (!statsEl || !statsWide.matches || !padDrawer.classList.contains('open')) return;
+  const key = e => e.ts + '|' + e.action + '|' + e.value;
+  const seen = new Set(statsHist.map(key));
+  const all = statsHist.concat(statsOwn.filter(e => !seen.has(key(e))));
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  const s = computeStats(all, Date.now(), d0.getTime());
+  document.getElementById('st-queue').textContent = queue.filter(v => v !== 'dummy').length;
+  document.getElementById('st-hour').textContent = s.hour;
+  document.getElementById('st-today').textContent = s.today;
+  document.getElementById('st-wait').textContent = fmtWait(s.avgWait);
+}
+function statsToggle(open) {
+  clearInterval(statsTimer);
+  if (open && statsEl && statsWide.matches) { statsStart(); statsDraw(); statsTimer = setInterval(statsDraw, 30000); }   // refresh so "last hour" keeps rolling
+}
+updateStatsFn = statsDraw;
 function escapeHtml(t) { return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function padRender(err) {
   const rep = padMode === 'replace';
