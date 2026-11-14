@@ -792,7 +792,7 @@ function padPress(k) {
 ['1','2','3','4','5','6','7','8','9','⌫','0','Add','Filler In-Front','Filler','Add In-Front'].forEach(k => {
   const b = document.createElement('div');
   b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' || k === 'Add In-Front' ? ' fn go' : k.startsWith('Filler') ? ' fn filler' : '');
-  b.textContent = k; padKeyEls[k] = b;
+  b.textContent = k.replace(' In-Front', '\nIn-Front'); padKeyEls[k] = b;   // 'Filler\nIn-Front': two centered lines
   // Input is sent on release (pointerup, only if the finger is still on the key). Pointer events — not click — so rapid taps
   // are never swallowed by the double-tap guard; sliding off the key or a cancelled touch sends nothing.
   let armed = false;
