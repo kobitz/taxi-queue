@@ -127,23 +127,31 @@ h2 { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: u
 #tab-pad::before { clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,12px 100%); }
 #tab-pad::after  { clip-path:polygon(1.4px 0,calc(100% - 1.4px) 0,calc(100% - 13.4px) calc(100% - 1.5px),13.4px calc(100% - 1.5px)); }
 #pad-anchor, #pad-drawer { display:contents; }   /* portrait: tab and keypad are plain items of the tab row */
-#pad-panel { display:none; order:-1; flex:0 0 100%; box-sizing:border-box; margin:0 0 8px; }   /* keypad sits above the tab row: tapping Dial Pad pushes the whole row down */
+#pad-panel { order:-1; flex:0 0 100%; box-sizing:border-box; margin:0; }   /* keypad sits above the tab row: tapping Dial Pad pushes the whole row down */
+/* Slide animation. "Lerp" feel: expo-out curve, so it moves fast at first then settles ("clicks") into place. */
+:root { --pad-ease:cubic-bezier(.16,1,.3,1); --pad-dur:.32s; }
 .tabs::after { content:''; flex:1 1 0; height:1.5px; background:var(--tabline); }
 .tabs.pad-open::after { display:none; }   /* open: Dial Pad tab and keypad read as one shape */   /* line from the top of Dial Pad to the right edge */
-#pad-drawer.open #pad-panel { display:block; }
+@media not all and (orientation:landscape) and (max-height:600px) {   /* portrait: the keypad grows/shrinks in place (JS sets a px height while it animates) */
+  #pad-panel { display:block; height:0; overflow:hidden; visibility:hidden; opacity:0;
+    transition:height var(--pad-dur) var(--pad-ease), margin-bottom var(--pad-dur) var(--pad-ease), opacity .18s ease, visibility 0s linear var(--pad-dur); }
+  #pad-drawer.open #pad-panel { height:auto; margin-bottom:8px; visibility:visible; opacity:1;
+    transition:height var(--pad-dur) var(--pad-ease), margin-bottom var(--pad-dur) var(--pad-ease), opacity .12s ease, visibility 0s; }
+}
 @media (orientation:landscape) and (max-height:600px) {
-  #pad-drawer { display:flex; margin:0; transition:transform .25s ease; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:center;
-    transform:translateX(calc(100% - 34px)); transition:transform .25s ease; }
+  /* Drawer is pinned to the bottom of the screen: the Dial Pad tab and the keypad both sit on the bottom edge. */
+  #pad-drawer { display:flex; margin:0; position:fixed; z-index:1000; left:auto; top:0 !important; right:0; bottom:0; flex-direction:row-reverse; justify-content:flex-start; align-items:flex-end;
+    transform:translateX(calc(100% - 34px)); transition:transform var(--pad-dur) var(--pad-ease); will-change:transform; }
   #pad-drawer.open { transform:none; }
-  #tab-pad { writing-mode:vertical-rl; width:34px; padding:44px 0; margin:0; display:flex; align-items:center; justify-content:center; opacity:.9; transform:rotate(180deg); }   /* label reads bottom-to-top; outline polygons below are mirrored to compensate */
-  #tab-pad::before, #pad-drawer.open #tab-pad::before { clip-path:polygon(0 100%,0 0,100% 17px,100% calc(100% - 17px)); }
-  #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(0 calc(100% - 1.7px),0 1.7px,calc(100% - 1.5px) 17.95px,calc(100% - 1.5px) calc(100% - 17.95px)); }
+  #tab-pad { writing-mode:vertical-rl; width:34px; padding:44px 0 18px; margin:0; display:flex; align-items:center; justify-content:center; opacity:.9; transform:rotate(180deg); }   /* label reads bottom-to-top; outline polygons below are mirrored to compensate */
+  /* Tab is flush with the bottom of the screen: only its top end is slanted  (bottom of screen / Dial Pad \____ top of screen) */
+  #tab-pad::before, #pad-drawer.open #tab-pad::before { clip-path:polygon(0 100%,0 0,100% 0,100% calc(100% - 17px)); }
+  #tab-pad::after, #pad-drawer.open #tab-pad::after { clip-path:polygon(0 calc(100% - 1.7px),0 0,calc(100% - 1.5px) 0,calc(100% - 1.5px) calc(100% - 17.95px)); }
   .tabs::after { display:none; }
-  /* rail: the tab's outline continues up and down the screen edge (hidden under the tab itself, and while open) */
+  /* rail: the tab's outline continues up the screen edge, above the tab. Stays visible while the pad is open too. */
   #pad-drawer::before { content:''; position:absolute; top:0; bottom:0; left:calc(34px - 1.5px); width:1.5px; background:var(--tabline); }
-  #pad-drawer.open::before { display:none; }
-  #pad-panel { order:0; flex:none; border:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none;
-    padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad); display:flex; flex-direction:column; justify-content:flex-end;
+  #pad-panel { display:block; order:0; flex:none; border:none; background:var(--bg,#111); margin:0; clip-path:none; visibility:visible; opacity:1; pointer-events:auto; transition:none; width:calc(300px + env(safe-area-inset-right)); height:100%; overflow:auto; border-bottom:none;
+    padding:8px env(safe-area-inset-right) env(safe-area-inset-bottom) var(--pad);
     --paddisp-h:11vh; --padkey-h:calc((100vh - 11vh - 8px - 5 * var(--gap, 4px) - env(safe-area-inset-bottom)) / 5); }
 }
 body { padding-left:max(var(--pad), env(safe-area-inset-left)); padding-right:max(var(--pad), env(safe-area-inset-right)); }

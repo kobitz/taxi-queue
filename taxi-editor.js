@@ -721,14 +721,35 @@ function padClamp(open) {
   const h = open ? padDrawer.offsetHeight : 34;
   return Math.max(0, Math.min(y, window.innerHeight - h));
 }
+// Portrait slide: the keypad panel's height is animated with explicit px values (CSS can't animate to/from "auto").
+let padAnimT = 0;
+function padSlide(open) {
+  clearTimeout(padAnimT);
+  const p = padPanel;
+  p.style.height = p.offsetHeight + 'px';          // start from wherever it is now (also works if interrupted mid-slide)
+  void p.offsetHeight;                              // commit that height before the class change starts the transition
+  padDrawer.classList.toggle('open', open);
+  p.style.height = (open ? p.scrollHeight : 0) + 'px';
+  padAnimT = setTimeout(() => {
+    p.style.height = '';                            // back to CSS: auto when open, 0 when closed
+    if (open && !padLand.matches) p.scrollIntoView({block:'nearest', behavior:'smooth'});
+  }, 340);
+}
 function showTab(which) {
   const pad = which === 'pad';
-  if (pad && !padLand.matches) { padDrawer.classList.add('open'); padTopOpen = padClamp(true); }
-  else padDrawer.classList.toggle('open', pad);
+  const was = padDrawer.classList.contains('open');
+  if (padLand.matches) {
+    // Landscape: the whole drawer slides in/out (CSS transform transition)
+    padDrawer.classList.toggle('open', pad);
+  } else if (was !== pad) {
+    padSlide(pad);
+  } else if (pad) {
+    padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
+  }
+  if (pad && !padLand.matches) padTopOpen = padClamp(true);
   padPlace();
   document.querySelector('.tabs').classList.toggle('pad-open', pad);
   if (!pad) { document.body.style.minHeight = ''; cancelReplace(); }
-  else if (!padLand.matches) padPanel.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 window.addEventListener('scroll', padPlace, { passive:true });
 window.addEventListener('resize', padPlace);
