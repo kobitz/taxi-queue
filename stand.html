@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <link rel="manifest" href="manifest-stand.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#2d1b69">
@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Stand">
 <title>Taxi Stand Queue</title>
-<link rel="stylesheet" href="taxi-editor.css?v=12">
+<link rel="stylesheet" href="taxi-editor.css?v=13">
 <script>try{if(localStorage.getItem('taxi-theme')==='light'){document.documentElement.classList.add('light');document.querySelector('meta[name="theme-color"]').content='#f1f4fb';document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content='default'}}catch(e){}</script>
 </head>
 <body>
@@ -38,15 +38,15 @@
   </div>
 </section>
 
-<div id="pad-drawer">
-  <h2 id="tab-pad">Dial Pad</h2>
+<div class="divider"></div>
+
+<div id="pad-anchor"><div id="pad-drawer">
   <div id="pad-panel">
     <div id="pad-display">_</div>
     <div id="pad-keys"></div>
   </div>
-</div>
-
-<div class="divider"></div>
+  <h2 id="tab-pad">Dial Pad</h2>
+</div></div>
 
 <section>
   <div class="tabs"><h2 id="tab-nq" class="active">Not in Queue</h2></div>
