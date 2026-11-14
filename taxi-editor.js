@@ -86,7 +86,8 @@ function saveToFirebase() {
 let COLS = parseInt(localStorage.getItem('taxi-cols') || '10');
 
 function calcTileSize() {
-  const pad = 10*2;
+  const cs = getComputedStyle(document.body);
+  const pad = (parseFloat(cs.paddingLeft) || 10) + (parseFloat(cs.paddingRight) || 10);   // includes safe areas and the landscape tab strip
   const labelW = 30;
   const gaps = (COLS-1)*4;
   const size = Math.floor((document.documentElement.clientWidth - pad - labelW - gaps) / COLS);
@@ -792,8 +793,19 @@ function padPress(k) {
   const b = document.createElement('div');
   b.className = 'pad-key' + (k === '⌫' ? ' fn' : k === 'Add' || k === 'Add In-Front' ? ' fn go' : k.startsWith('Filler') ? ' fn filler' : '');
   b.textContent = k; padKeyEls[k] = b;
-  // pointerdown fires instantly for touch + mouse, so rapid taps are never swallowed by the double-tap guard
-  b.addEventListener('pointerdown', e => { e.preventDefault(); tick(); padKeep(() => padPress(k)); });
+  // Input is sent on release (pointerup, only if the finger is still on the key). Pointer events — not click — so rapid taps
+  // are never swallowed by the double-tap guard; sliding off the key or a cancelled touch sends nothing.
+  let armed = false;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); armed = true; b.classList.add('down'); });
+  b.addEventListener('pointerup', e => {
+    const was = armed; armed = false; b.classList.remove('down');
+    if (!was) return;
+    const r = b.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    tick(); padKeep(() => padPress(k));
+  });
+  b.addEventListener('pointercancel', () => { armed = false; b.classList.remove('down'); });
+  b.addEventListener('pointerleave', () => { armed = false; b.classList.remove('down'); });
   document.getElementById('pad-keys').appendChild(b);
 });
 padRender();   // show the blinking cursor before anything is typed
